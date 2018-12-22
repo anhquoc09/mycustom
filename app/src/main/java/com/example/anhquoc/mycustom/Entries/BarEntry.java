@@ -3,9 +3,9 @@ package com.example.anhquoc.mycustom.Entries;
 public class BarEntry {
     private String mXAxisName;
 
-    private float mValue;
+    private int mValue;
 
-    public BarEntry(String XAxisName, float value) {
+    public BarEntry(String XAxisName, int value) {
         mXAxisName = XAxisName;
         mValue = value;
     }
@@ -18,11 +18,11 @@ public class BarEntry {
         mXAxisName = XAxisName;
     }
 
-    public float getValue() {
+    public int getValue() {
         return mValue;
     }
 
-    public void setValue(float value) {
+    public void setValue(int value) {
         mValue = value;
     }
 }

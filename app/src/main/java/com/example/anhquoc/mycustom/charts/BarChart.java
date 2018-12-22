@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
@@ -12,6 +13,9 @@ import android.view.View;
 
 import com.example.anhquoc.mycustom.Entries.BarEntry;
 import com.example.anhquoc.mycustom.R;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class BarChart extends View {
 
@@ -37,17 +41,13 @@ public class BarChart extends View {
 
     private static final int NUMOF_BASELINE = 5;
 
-    private BarEntry[] mEntries;
+    private List<BarEntry> mEntries;
 
     private Paint mBarPaint;
 
     private Paint mLinePaint;
 
-    private Paint mXAxisLabelPaint;
-
-    private Paint mYAxisLabelPaint;
-
-    private long mAnimateDuration = DEFAULT_ANIMATE_DURATION;
+    private Paint mLabelPaint;
 
     private int mAlphaSelected = DEFAULT_ALPHA_SELECTED;
 
@@ -65,7 +65,7 @@ public class BarChart extends View {
 
     private int mNumOfBaseLine = NUMOF_BASELINE;
 
-    private int mBaseLineDistance;
+    private int mXAxisBaseLine;
 
     private int mColor;
 
@@ -73,6 +73,8 @@ public class BarChart extends View {
         super(context, attrs);
 
         mContext = context;
+
+        mEntries = new ArrayList<>();
 
         TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.BarChart);
 
@@ -94,13 +96,10 @@ public class BarChart extends View {
         mLinePaint.setColor(mColor);
         mLinePaint.setStrokeWidth(1f);
 
-        mXAxisLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mXAxisLabelPaint.setColor(mColor);
-        mXAxisLabelPaint.setTextSize(dpToPixels(mContext, mTextSize));
-
-        mYAxisLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mYAxisLabelPaint.setColor(mColor);
-        mYAxisLabelPaint.setTextSize(dpToPixels(mContext , mTextSize));
+        mLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mLabelPaint.setColor(mColor);
+        mLabelPaint.setTextSize(dpToPixels(mContext, mTextSize));
+        mLabelPaint.setAlpha(mAlphaUnselected);
     }
 
     @Override
@@ -114,24 +113,43 @@ public class BarChart extends View {
 
     private void drawBackground(Canvas canvas) {
 
-        mBaseLineDistance = (getHeight() - (mTextSize + LABEL_AND_AXIS_PADDING * 3)) / (mNumOfBaseLine - 1);
-
-        int stopXBaseLine = getWidth() - LABEL_AND_AXIS_PADDING * 2 - String.valueOf(mMaxYValue).length() * mTextSize;
+        int mBaseLineDistance = (getOriginRect().bottom - getOriginRect().top) / (mNumOfBaseLine - 1);
 
         for (int i = 0; i < mNumOfBaseLine; i++) {
-            int y = LABEL_AND_AXIS_PADDING + i * mBaseLineDistance;
+            int y = getOriginRect().top + i * mBaseLineDistance;
 
             String text = "" + (mMaxYValue - i * ((mMaxYValue - mMinYValue) / (mNumOfBaseLine - 1)));
             text = text + (i == mNumOfBaseLine - 1 ? "%" : "");
 
 
-            canvas.drawLine(0, y, stopXBaseLine, y, mLinePaint);
-            canvas.drawText(text, stopXBaseLine + LABEL_AND_AXIS_PADDING, y + mTextSize, mYAxisLabelPaint);
+            canvas.drawLine(getOriginRect().left, y, getOriginRect().right, y, mLinePaint);
+            canvas.drawText(text, getOriginRect().right + LABEL_AND_AXIS_PADDING, y + mTextSize, mLabelPaint);
         }
     }
 
     private void drawBarEntries(Canvas canvas) {
 
+        for (int i = 0; i < mEntries.size(); i++) {
+            int left = getOriginRect().left + i * (mBarWidth + mBarDistance);
+            int right = Math.min(left + mBarWidth, getOriginRect().right);
+            int top = getOriginRect().bottom - mEntries.get(i).getValue() * (getOriginRect().bottom - getOriginRect().top) / (mMaxYValue - mMinYValue);
+
+            canvas.drawRect(left, top, right, getOriginRect().bottom, mBarPaint);
+            canvas.drawText(mEntries.get(i).getXAxisName(), (right + left) / 2 - mTextSize, getOriginRect().bottom + LABEL_AND_AXIS_PADDING, mLabelPaint);
+        }
+    }
+
+    private Rect getOriginRect() {
+        return new Rect(0,
+                LABEL_AND_AXIS_PADDING,
+                getWidth() - LABEL_AND_AXIS_PADDING * 2 - String.valueOf(mMaxYValue).length() * mTextSize,
+                getHeight() - (mTextSize + LABEL_AND_AXIS_PADDING * 2));
+
+    }
+
+    public void add(String name, int value) {
+        mEntries.add(new BarEntry(name, value));
+        invalidate();
     }
 
     public static float dpToPixels(Context context, float dpValue) {
