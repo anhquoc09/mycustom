@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--BarChart attributes-->
+    <declare-styleable name="BarChart">
+        <attr name="bar_color" format="dimension"/>
+
+        <attr name="bar_distance" format="dimension"/>
+    </declare-styleable>
+</resources>

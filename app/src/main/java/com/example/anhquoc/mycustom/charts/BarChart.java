@@ -1,209 +1,145 @@
 package com.example.anhquoc.mycustom.charts;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Point;
-import android.graphics.Rect;
-import android.graphics.Typeface;
+import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.View;
 
 import com.example.anhquoc.mycustom.Entries.BarEntry;
+import com.example.anhquoc.mycustom.R;
 
-import java.text.DecimalFormat;
+public class BarChart extends View {
 
-public class BarChart extends View{
+    private Context mContext;
 
-        private Paint mPaint;
+    private static final long DEFAULT_ANIMATE_DURATION = 200;
 
-        private Context mContext;
+    private static final int DEFAULT_ALPHA_SELECTED = 255;
 
-        private BarEntry[] mDataArray;
+    private static final int DEFAULT_ALPHA_UNSELECTED = 100;
 
-        private float mMaxValueOfData;
+    private static final int DEFAULT_BAR_DISTANCE = 20;
 
-        private final int mStrokeWidth = 2;
+    private static final int DEFAULT_BAR_WIDTH = 40;
 
-        private int mAxisFontSize = 14;
+    private static final int DEFAULT_TEXT_SIZE = 12;
 
-        private int mMaxValueCountOnYAxis = 9;
+    private static final int LABEL_AND_AXIS_PADDING = 40;
 
-        private int mDistanceAxisAndValue;
+    private static final int DEFAULT_MIN_Y_VALUE = 0;
 
-        private int mMaxWidthOfYAxisText;
+    private static final int DEFAULT_MAX_Y_VALUE = 100;
 
-        private int mMaxHeightOfXAxisText;
+    private static final int NUMOF_BASELINE = 5;
 
-        public BarChart(Context context, AttributeSet attributeSet) {
+    private BarEntry[] mEntries;
 
-            super(context, attributeSet);
-            mContext = context;
-            mPaint = new Paint();
-            init();
+    private Paint mBarPaint;
+
+    private Paint mLinePaint;
+
+    private Paint mXAxisLabelPaint;
+
+    private Paint mYAxisLabelPaint;
+
+    private long mAnimateDuration = DEFAULT_ANIMATE_DURATION;
+
+    private int mAlphaSelected = DEFAULT_ALPHA_SELECTED;
+
+    private int mAlphaUnselected = DEFAULT_ALPHA_UNSELECTED;
+
+    private int mBarDistance = DEFAULT_BAR_DISTANCE;
+
+    private int mBarWidth = DEFAULT_BAR_WIDTH;
+
+    private int mTextSize = DEFAULT_TEXT_SIZE;
+
+    private int mMaxYValue = DEFAULT_MAX_Y_VALUE;
+
+    private int mMinYValue = DEFAULT_MIN_Y_VALUE;
+
+    private int mNumOfBaseLine = NUMOF_BASELINE;
+
+    private int mBaseLineDistance;
+
+    private int mColor;
+
+    public BarChart(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+
+        mContext = context;
+
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.BarChart);
+
+        mColor = typedArray.getColor(R.styleable.BarChart_bar_color, getResources().getColor(R.color.colorAccent));
+
+        mBarDistance = typedArray.getInt(R.styleable.BarChart_bar_distance, DEFAULT_BAR_DISTANCE);
+
+        typedArray.recycle();
+
+        initPaint();
+    }
+
+    private void initPaint() {
+        mBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mBarPaint.setColor(mColor);
+        mBarPaint.setAlpha(mAlphaUnselected);
+
+        mLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mLinePaint.setColor(mColor);
+        mLinePaint.setStrokeWidth(1f);
+
+        mXAxisLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mXAxisLabelPaint.setColor(mColor);
+        mXAxisLabelPaint.setTextSize(dpToPixels(mContext, mTextSize));
+
+        mYAxisLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mYAxisLabelPaint.setColor(mColor);
+        mYAxisLabelPaint.setTextSize(dpToPixels(mContext , mTextSize));
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+
+        drawBackground(canvas);
+
+        drawBarEntries(canvas);
+    }
+
+    private void drawBackground(Canvas canvas) {
+
+        mBaseLineDistance = (getHeight() - (mTextSize + LABEL_AND_AXIS_PADDING * 3)) / (mNumOfBaseLine - 1);
+
+        int stopXBaseLine = getWidth() - LABEL_AND_AXIS_PADDING * 2 - String.valueOf(mMaxYValue).length() * mTextSize;
+
+        for (int i = 0; i < mNumOfBaseLine; i++) {
+            int y = LABEL_AND_AXIS_PADDING + i * mBaseLineDistance;
+
+            String text = "" + (mMaxYValue - i * ((mMaxYValue - mMinYValue) / (mNumOfBaseLine - 1)));
+            text = text + (i == mNumOfBaseLine - 1 ? "%" : "");
+
+
+            canvas.drawLine(0, y, stopXBaseLine, y, mLinePaint);
+            canvas.drawText(text, stopXBaseLine + LABEL_AND_AXIS_PADDING, y + mTextSize, mYAxisLabelPaint);
         }
+    }
 
-        private void init() {
+    private void drawBarEntries(Canvas canvas) {
 
-            mDistanceAxisAndValue = (int) dpToPixels(mContext, 14);
+    }
+
+    public static float dpToPixels(Context context, float dpValue) {
+
+        if (context != null) {
+            DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+            return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dpValue, metrics);
         }
-
-        public void setYAxisData(BarEntry[] barData) {
-
-            mDataArray = barData;
-            mMaxValueOfData = Float.MIN_VALUE;
-            for (int index = 0; index < mDataArray.length; index++) {
-                if (mMaxValueOfData < mDataArray[index].getValue())
-                    mMaxValueOfData = mDataArray[index].getValue();
-            }
-            findMaxWidthOfText(barData);
-            invalidate();
-        }
-
-        public float getMaxValueOfData() {
-
-            return mMaxValueOfData;
-        }
-
-        private int getMaxWidthOfYAxisText() {
-
-            return mMaxWidthOfYAxisText;
-        }
-
-        private void findMaxWidthOfText(BarEntry[] barDatas) {
-
-            mMaxWidthOfYAxisText = Integer.MIN_VALUE;
-            mMaxHeightOfXAxisText = Integer.MIN_VALUE;
-
-            Paint paint = new Paint();
-            paint.setTypeface(Typeface.DEFAULT);
-            paint.setTextSize(dpToPixels(mContext, mAxisFontSize));
-
-            Rect bounds = new Rect();
-
-            for (int index = 0; index < mDataArray.length; index++) {
-                int currentTextWidth =
-                        (int) paint.measureText(Float.toString(barDatas[index].getValue()));
-                if (mMaxWidthOfYAxisText < currentTextWidth)
-                    mMaxWidthOfYAxisText = currentTextWidth;
-
-                mPaint.getTextBounds(barDatas[index].getXAxisName(), 0,
-                        barDatas[index].getXAxisName().length(), bounds);
-                if (mMaxHeightOfXAxisText < bounds.height())
-                    mMaxHeightOfXAxisText = bounds.height();
-            }
-        }
-
-        public int getMaxHeightOfXAxisText() {
-
-            return mMaxHeightOfXAxisText;
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-
-            int usableViewHeight = getHeight() - getPaddingBottom() - getPaddingTop();
-            int usableViewWidth = getWidth() - getPaddingLeft() - getPaddingRight();
-            Point origin = getOrigin();
-            mPaint.setColor(Color.CYAN);
-            mPaint.setStrokeWidth(mStrokeWidth);
-            //draw y axis
-            canvas.drawLine(origin.x, origin.y, origin.x,
-                    origin.y - (usableViewHeight - getXAxisLabelAndMargin()), mPaint);
-            //draw x axis
-            mPaint.setStrokeWidth(mStrokeWidth + 1);
-            canvas.drawLine(origin.x, origin.y,
-                    origin.x + usableViewWidth -
-                            (getMaxWidthOfYAxisText() +
-                                    mDistanceAxisAndValue), origin.y, mPaint);
-
-            if (mDataArray == null || mDataArray.length == 0)
-                return;
-            //draw bar chart
-            int barAndVacantSpaceCount = (mDataArray.length << 1) + 1;
-            int widthFactor = (usableViewWidth - getMaxWidthOfYAxisText()) / barAndVacantSpaceCount;
-            int x1, x2, y1, y2;
-            float maxValue = getMaxValueOfData();
-            for (int index = 0; index < mDataArray.length; index++) {
-                x1 = origin.x + ((index << 1) + 1) * widthFactor;
-                x2 = origin.x + ((index << 1) + 2) * widthFactor;
-                int barHeight = (int) ((usableViewHeight - getXAxisLabelAndMargin()) *
-                        mDataArray[index].getValue() / maxValue);
-                y1 = origin.y - barHeight;
-                y2 = origin.y;
-                canvas.drawRect(x1, y1, x2, y2, mPaint);
-                showXAxisLabel(origin, mDataArray[index].getXAxisName(), x1 + (x2 - x1) / 2, canvas);
-            }
-            showYAxisLabels(origin, (usableViewHeight - getXAxisLabelAndMargin()), canvas);
-        }
-
-        private String getFormattedValue(float value) {
-
-            DecimalFormat precision = new DecimalFormat("0.0");
-            return precision.format(value);
-        }
-
-        public void showYAxisLabels(Point origin, int usableViewHeight, Canvas canvas) {
-
-            float maxValueOfData = (int) getMaxValueOfData();
-            float yAxisValueInterval = usableViewHeight / mMaxValueCountOnYAxis;
-            float dataInterval = maxValueOfData / mMaxValueCountOnYAxis;
-            float valueToBeShown = maxValueOfData;
-            mPaint.setTypeface(Typeface.DEFAULT);
-            mPaint.setTextSize(dpToPixels(mContext, mAxisFontSize));
-
-            //draw all texts from top to bottom
-            for (int index = 0; index < mMaxValueCountOnYAxis; index++) {
-                String string = getFormattedValue(valueToBeShown);
-
-                Rect bounds = new Rect();
-                mPaint.getTextBounds(string, 0, string.length(), bounds);
-                int y = (int) ((origin.y - usableViewHeight) + yAxisValueInterval * index);
-                canvas.drawLine(origin.x - (mDistanceAxisAndValue >> 1), y, origin.x, y, mPaint);
-                y = y + (bounds.height() >> 1);
-                canvas.drawText(string, origin.x - bounds.width() - mDistanceAxisAndValue, y, mPaint);
-                valueToBeShown = valueToBeShown - dataInterval;
-            }
-        }
-
-        public void showXAxisLabel(Point origin, String label, int centerX, Canvas canvas) {
-
-            Rect bounds = new Rect();
-            mPaint.getTextBounds(label, 0, label.length(), bounds);
-            int y = origin.y + mDistanceAxisAndValue + getMaxHeightOfXAxisText();
-            int x = centerX - bounds.width() / 2;
-            mPaint.setTextSize(dpToPixels(mContext, mAxisFontSize));
-            mPaint.setTypeface(Typeface.DEFAULT);
-            canvas.drawText(label, x, y, mPaint);
-        }
-
-        private int getXAxisLabelAndMargin() {
-
-            return getMaxHeightOfXAxisText() + mDistanceAxisAndValue;
-        }
-
-        public Point getOrigin() {
-
-            if (mDataArray != null) {
-
-                return new Point(getPaddingLeft() + getMaxWidthOfYAxisText() + mDistanceAxisAndValue,
-                        getHeight() - getPaddingBottom() - getXAxisLabelAndMargin());
-            } else {
-
-                return new Point(getPaddingLeft() + getMaxWidthOfYAxisText() + mDistanceAxisAndValue,
-                        getHeight() - getPaddingBottom());
-            }
-        }
-
-        public static float dpToPixels(Context context, float dpValue) {
-
-            if (context != null) {
-                DisplayMetrics metrics = context.getResources().getDisplayMetrics();
-                return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dpValue, metrics);
-            }
-            return 0;
-        }
+        return 0;
+    }
 }

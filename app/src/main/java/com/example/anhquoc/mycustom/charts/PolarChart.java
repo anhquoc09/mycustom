@@ -1,4 +1,4 @@
 package com.example.anhquoc.mycustom.charts;
 
-public class CircularChart {
+public class PolarChart {
 }
