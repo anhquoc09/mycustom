@@ -1,4 +1,4 @@
-package com.example.anhquoc.mycustom.charts;
+package com.example.anhquoc.mycustom;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -12,7 +12,7 @@ import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.View;
 
-import com.example.anhquoc.mycustom.Entries.BarEntry;
+import com.example.anhquoc.mycustom.charts.BarEntry;
 
 import java.text.DecimalFormat;
 

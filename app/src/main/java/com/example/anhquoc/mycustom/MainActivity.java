@@ -4,15 +4,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
 import com.example.anhquoc.mycustom.charts.BarChart;
-import com.example.anhquoc.mycustom.charts.Chart;
-
-import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        TouchExample view = new TouchExample(this);
+        setContentView(view);
         setContentView(R.layout.activity_main);
 
         BarChart barChart = (BarChart) findViewById(R.id.barChart);
