@@ -1,13 +1,13 @@
 package com.example.anhquoc.mycustom.charts;
 
-import android.graphics.Rect;
+import android.graphics.RectF;
 
 public class BarEntry {
     private String mXAxisName;
 
     private int mValue;
 
-    private Rect mRect;
+    private RectF mRect;
 
     private boolean mIsSelected = false;
 
@@ -36,11 +36,11 @@ public class BarEntry {
         mIsSelected = isSelected;
     }
 
-    public Rect getRect() {
+    public RectF getRect() {
         return mRect;
     }
 
-    public void setRect(Rect mRect) {
+    public void setRect(RectF mRect) {
         this.mRect = mRect;
     }
 

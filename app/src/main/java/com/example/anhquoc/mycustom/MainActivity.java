@@ -10,9 +10,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        TouchExample view = new TouchExample(this);
-        setContentView(view);
         setContentView(R.layout.activity_main);
+//        TouchExample view = new TouchExample(this);
+//        setContentView(view);
 
         BarChart barChart = (BarChart) findViewById(R.id.barChart);
 

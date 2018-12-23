@@ -146,8 +146,6 @@ public class BarChart extends View {
 
         for (int i = 0; i < mEntries.size(); i++) {
 
-            mEntries.get(i).setRect(new Rect());
-
             float left = Math.max(getOriginRect().left, getOriginRect().left + i * (mBarWidth + mBarDistance) + mXScrollDistance);
 
             if (left >= getOriginRect().right) {
@@ -164,13 +162,15 @@ public class BarChart extends View {
 
             float top = getOriginRect().bottom - mEntries.get(i).getValue() * (getOriginRect().bottom - getOriginRect().top) / (mMaxYValue - mMinYValue);
 
+            mEntries.get(i).setRect(new RectF(left, top, right, bottom));
+
             if (mEntries.get(i).isIsSelected()) {
                 mBarPaint.setAlpha(ALPHA_SELECTED);
             } else {
                 mBarPaint.setAlpha(ALPHA_UNSELECTED);
             }
 
-            canvas.drawRect(left, top, right, bottom, mBarPaint);
+            canvas.drawRect(mEntries.get(i).getRect(), mBarPaint);
             canvas.drawText(mEntries.get(i).getXAxisName(), (right + left) / 2 - mTextSize, getOriginRect().bottom + LABEL_AND_AXIS_PADDING, mLabelPaint);
         }
     }
@@ -252,7 +252,9 @@ public class BarChart extends View {
 
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+
             mXScrollDistance = mXScrollDistance - distanceX;
+
             invalidate();
             return true;
         }
