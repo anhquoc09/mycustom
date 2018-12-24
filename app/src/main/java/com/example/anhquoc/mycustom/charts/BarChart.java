@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
@@ -30,13 +29,13 @@ public class BarChart extends View {
 
     private static final int ALPHA_UNSELECTED = 100;
 
-    private static final int DEFAULT_BAR_DISTANCE = 20;
+    private static final int DEFAULT_BAR_DISTANCE = 10;
 
-    private static final int DEFAULT_BAR_WIDTH = 40;
+    private static final int DEFAULT_BAR_WIDTH = 20;
 
-    private static final int DEFAULT_TEXT_SIZE = 12;
+    private static final int DEFAULT_TEXT_SIZE = 14;
 
-    private static final int LABEL_AND_AXIS_PADDING = 40;
+    private static final int LABEL_AND_AXIS_PADDING = 10;
 
     private static final int DEFAULT_MIN_Y_VALUE = 0;
 
@@ -44,9 +43,13 @@ public class BarChart extends View {
 
     private static final int NUMOF_BASELINE = 5;
 
-    private static final float DEFAULT_SCROLL_DISTANCE = 0;
+    private static final float LIMIT_LEFT_CROLL_DISTANCE = 0;
 
     private static final int MAX_POINTER = 2;
+
+    private float mWidth;
+
+    private float mHeight;
 
     private List<BarEntry> mEntries;
 
@@ -60,9 +63,9 @@ public class BarChart extends View {
 
     private GestureDetector mGestureDetector;
 
-    private int mBarDistance = DEFAULT_BAR_DISTANCE;
+    private float mBarDistance = DEFAULT_BAR_DISTANCE;
 
-    private int mBarWidth = DEFAULT_BAR_WIDTH;
+    private float mBarWidth = DEFAULT_BAR_WIDTH;
 
     private int mTextSize = DEFAULT_TEXT_SIZE;
 
@@ -70,11 +73,13 @@ public class BarChart extends View {
 
     private int mMinYValue = DEFAULT_MIN_Y_VALUE;
 
-    private float mXScrollDistance = DEFAULT_SCROLL_DISTANCE;
+    private float mXScrollDistance;
 
-    private float mYScrollDistance = DEFAULT_SCROLL_DISTANCE;
+    private float mLimitRightScrollDistance;
 
-    private int mScale = 1;
+    private float mYScrollDistance;
+
+    private float mScale = 1f;
 
     private int mColor;
 
@@ -110,8 +115,16 @@ public class BarChart extends View {
 
         mLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mLabelPaint.setColor(mColor);
-        mLabelPaint.setTextSize(dpToPixels(mContext, mTextSize));
+        mLabelPaint.setTextSize(getTextSize());
         mLabelPaint.setAlpha(ALPHA_UNSELECTED);
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+
+        float width = getWidth();
+        getHeight();
     }
 
     @Override
@@ -130,7 +143,7 @@ public class BarChart extends View {
         String text = "0%";
         float y = getOriginRect().bottom;
         canvas.drawLine(getOriginRect().left, y, getOriginRect().right, y, mLinePaint);
-        canvas.drawText(text, getOriginRect().right + LABEL_AND_AXIS_PADDING, y + mTextSize, mLabelPaint);
+        canvas.drawText(text, getOriginRect().right + getLabelAndAxisPadding(), y + getTextSize() / 2, mLabelPaint);
 
         for (int i = 0; i < NUMOF_BASELINE - 1; i++) {
             y = getOriginRect().top + i * mBaseLineDistance;
@@ -138,25 +151,29 @@ public class BarChart extends View {
             text = "" + (mMaxYValue - i * ((mMaxYValue - mMinYValue) / (NUMOF_BASELINE - 1)));
 
             canvas.drawLine(getOriginRect().left, y, getOriginRect().right, y, mLinePaint);
-            canvas.drawText(text, getOriginRect().right + LABEL_AND_AXIS_PADDING, y + mTextSize, mLabelPaint);
+            canvas.drawText(text, getOriginRect().right + getLabelAndAxisPadding(), y + getTextSize() / 4, mLabelPaint);
         }
     }
 
     private void drawBarEntries(Canvas canvas) {
 
+        calcLimitRightScrollDistance();
+
+        calcScale();
+
         for (int i = 0; i < mEntries.size(); i++) {
 
-            float left = Math.max(getOriginRect().left, getOriginRect().left + i * (mBarWidth + mBarDistance) + mXScrollDistance);
+            float left = getOriginRect().left + i * (getBarWidth() + getBarDistance()) + mXScrollDistance;
+            float right = left + getBarWidth();
 
-            if (left >= getOriginRect().right) {
+            left = Math.max(left, getOriginRect().left);
+            right = Math.min(right, getOriginRect().right);
+
+            if (left >= getOriginRect().right || right <= getOriginRect().left) {
                 continue;
             }
 
-            float right = Math.min(getOriginRect().left + i * (mBarWidth + mBarDistance) + mXScrollDistance + mBarWidth, getOriginRect().right);
-
-            if (right <= getOriginRect().left) {
-                continue;
-            }
+            float xText = (left + right) / 2 - getTextSize() / 4;
 
             float bottom = getOriginRect().bottom;
 
@@ -171,16 +188,47 @@ public class BarChart extends View {
             }
 
             canvas.drawRect(mEntries.get(i).getRect(), mBarPaint);
-            canvas.drawText(mEntries.get(i).getXAxisName(), (right + left) / 2 - mTextSize, getOriginRect().bottom + LABEL_AND_AXIS_PADDING, mLabelPaint);
+
+            canvas.drawText(mEntries.get(i).getXAxisName(), xText, getOriginRect().bottom + getLabelAndAxisPadding() * 2, mLabelPaint);
+        }
+    }
+
+    private void calcScale() {
+        mBarDistance = DEFAULT_BAR_DISTANCE * mScale;
+
+        mBarWidth = DEFAULT_BAR_WIDTH * mScale;
+    }
+
+    private void calcLimitRightScrollDistance() {
+        mLimitRightScrollDistance = LIMIT_LEFT_CROLL_DISTANCE;
+        float distance = mEntries.size() * (getBarWidth() + getBarDistance()) - (getOriginRect().right - getOriginRect().left);
+        if (distance > 0) {
+            mLimitRightScrollDistance = LIMIT_LEFT_CROLL_DISTANCE + distance - getBarDistance();
         }
     }
 
     private RectF getOriginRect() {
         return new RectF(0,
-                LABEL_AND_AXIS_PADDING,
-                getWidth() - LABEL_AND_AXIS_PADDING * 2 - String.valueOf(mMaxYValue).length() * mTextSize,
-                getHeight() - (mTextSize + LABEL_AND_AXIS_PADDING * 2));
+                getLabelAndAxisPadding(),
+                getWidth() - String.valueOf(mMaxYValue).length() * getTextSize(),
+                getHeight() - (getTextSize() + getLabelAndAxisPadding() * 2));
 
+    }
+
+    private float getBarWidth() {
+        return dpToPixels(mContext, mBarWidth);
+    }
+
+    private float getBarDistance() {
+        return dpToPixels(mContext, mBarDistance);
+    }
+
+    private float getLabelAndAxisPadding() {
+        return dpToPixels(mContext, LABEL_AND_AXIS_PADDING);
+    }
+
+    private float getTextSize() {
+        return spToPixels(mContext, mTextSize);
     }
 
     @Override
@@ -201,7 +249,7 @@ public class BarChart extends View {
         if (mEntries == null) {
             mEntries = new ArrayList<>();
         }
-        for (int i = 0 ;i < entries.size(); i++) {
+        for (int i = 0; i < entries.size(); i++) {
             add(entries.get(i).getXAxisName(), entries.get(i).getValue());
         }
     }
@@ -227,12 +275,20 @@ public class BarChart extends View {
         return 0;
     }
 
+    public static float spToPixels(Context context, float spValue) {
+        if (context != null) {
+            DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+            return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, spValue, metrics);
+        }
+        return 0;
+    }
+
     public class CustomGesture extends GestureDetector.SimpleOnGestureListener {
         private boolean normal = true;
 
         @Override
         public boolean onDoubleTap(MotionEvent e) {
-            mScale = normal ? 3 : 1;
+            mScale = normal ? 3f : 1f;
 
             normal = !normal;
 
@@ -253,8 +309,14 @@ public class BarChart extends View {
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
 
-            mXScrollDistance = mXScrollDistance - distanceX;
-
+            //Scroll from left to right
+            if (distanceX < 0) {
+                mXScrollDistance = Math.min(LIMIT_LEFT_CROLL_DISTANCE, mXScrollDistance - distanceX);
+            }
+            //Scroll from right to left
+            else {
+                mXScrollDistance = Math.max(LIMIT_LEFT_CROLL_DISTANCE - mLimitRightScrollDistance, mXScrollDistance - distanceX);
+            }
             invalidate();
             return true;
         }
