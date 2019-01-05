@@ -36,7 +36,7 @@ public class BarEntry {
         mIsSelected = isSelected;
     }
 
-    public RectF getRect() {
+    public RectF getRectF() {
         return mRect;
     }
 
