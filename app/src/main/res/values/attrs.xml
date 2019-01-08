@@ -2,7 +2,7 @@
 <resources>
     <!--BarChart attributes-->
     <declare-styleable name="BarChart">
-        <attr name="bar_color" format="dimension"/>
+        <attr name="text_color" format="color|reference"/>
 
         <attr name="bar_distance" format="dimension"/>
     </declare-styleable>
