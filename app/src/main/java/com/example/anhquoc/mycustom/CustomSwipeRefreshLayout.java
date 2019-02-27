@@ -6,7 +6,6 @@ import android.net.Uri;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ListViewCompat;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -55,7 +54,7 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
 
     private float mTotalDragDistance = -1;
 
-    private int mCurrentTargetOffsetTop;
+    private int mCurrentTargetTop;
 
     private float mInitialMotionY;
 
@@ -68,8 +67,6 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
     private boolean mScale;
 
     private boolean mReturningToStart;
-
-    private boolean mUsingCustomStart;
 
     private final DecelerateInterpolator mDecelerateInterpolator;
 
@@ -116,6 +113,13 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
         }
     };
 
+    private final Animation mAnimateToStartPosition = new Animation() {
+        @Override
+        public void applyTransformation(float interpolatedTime, Transformation t) {
+            moveToStart(interpolatedTime);
+        }
+    };
+
     private final Animation.AnimationListener mRefreshListener = new Animation.AnimationListener() {
         @Override
         public void onAnimationStart(Animation animation) {
@@ -133,7 +137,7 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
                         mListener.onRefresh();
                     }
                 }
-                mCurrentTargetOffsetTop = mRefreshView.getTop();
+                mCurrentTargetTop = mRefreshView.getTop();
             } else {
                 reset();
             }
@@ -146,9 +150,9 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
         if (mScale) {
 //            setAnimationProgress(0);
         } else {
-            setTargetOffsetTopAndBottom(mOriginalOffsetTop - mCurrentTargetOffsetTop);
+            setTargetOffsetTopAndBottom(mOriginalOffsetTop - mCurrentTargetTop);
         }
-        mCurrentTargetOffsetTop = mRefreshView.getTop();
+        mCurrentTargetTop = mRefreshView.getTop();
     }
 
     @Override
@@ -158,14 +162,6 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
             reset();
         }
     }
-
-//    public void setProgressViewOffset(boolean scale, int start, int end) {
-//        mScale = scale;
-//        mOriginalOffsetTop = start;
-//        mSpinnerOffsetEnd = end;
-//        reset();
-//        mRefreshing = false;
-//    }
 
     public CustomSwipeRefreshLayout(Context context) {
         this(context, null);
@@ -184,7 +180,7 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
         createRefreshView();
         ViewCompat.setChildrenDrawingOrderEnabled(this, true);
 
-        mOriginalOffsetTop = mCurrentTargetOffsetTop;
+        mOriginalOffsetTop = mCurrentTargetTop;
         moveToStart(1.0f);
 
         final TypedArray a = context.obtainStyledAttributes(attrs, LAYOUT_ATTRS);
@@ -272,65 +268,8 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
         return animation != null && animation.hasStarted() && !animation.hasEnded();
     }
 
-    private void moveSpinner(float overscrollTop) {
-        float originalDragPercent = overscrollTop / mTotalDragDistance;
-
-        float dragPercent = Math.min(1f, Math.abs(originalDragPercent));
-        float extraOS = Math.abs(overscrollTop) - mTotalDragDistance;
-        float slingshotDist = mUsingCustomStart ? mSpinnerOffsetEnd - mOriginalOffsetTop
-                : mSpinnerOffsetEnd;
-        float tensionSlingshotPercent = Math.max(0, Math.min(extraOS, slingshotDist * 2)
-                / slingshotDist);
-        float tensionPercent = (float) ((tensionSlingshotPercent / 4) - Math.pow(
-                (tensionSlingshotPercent / 4), 2)) * 2f;
-        float extraMove = (slingshotDist) * tensionPercent * 2;
-
-        int targetY = mOriginalOffsetTop + (int) ((slingshotDist * dragPercent) + extraMove);
-        // where 1.0f is a full circle
-        if (mRefreshView.getVisibility() != View.VISIBLE) {
-            mRefreshView.setVisibility(View.VISIBLE);
-        }
-        if (!mScale) {
-            mRefreshView.setScaleX(1f);
-            mRefreshView.setScaleY(1f);
-        }
-
-        setTargetOffsetTopAndBottom(targetY - mCurrentTargetOffsetTop);
-    }
-
-    private void finishSpinner(float overscrollTop) {
-        if (overscrollTop > mTotalDragDistance) {
-            setRefreshing(true, true /* notify */);
-        } else {
-            // cancel refresh
-            mRefreshing = false;
-            Animation.AnimationListener listener = null;
-            if (!mScale) {
-                listener = new Animation.AnimationListener() {
-
-                    @Override
-                    public void onAnimationStart(Animation animation) {
-                    }
-
-                    @Override
-                    public void onAnimationEnd(Animation animation) {
-                        if (!mScale) {
-                            startScaleDownAnimation();
-                        }
-                    }
-
-                    @Override
-                    public void onAnimationRepeat(Animation animation) {
-                    }
-
-                };
-            }
-            animateOffsetToStartPosition();
-        }
-    }
-
     private void animateOffsetToCorrectPosition() {
-        mFrom = mCurrentTargetOffsetTop;
+        mFrom = mCurrentTargetTop;
         mAnimateToCorrectPosition.reset();
         mAnimateToCorrectPosition.setDuration(ANIMATE_TO_TRIGGER_DURATION);
         mAnimateToCorrectPosition.setInterpolator(mDecelerateInterpolator);
@@ -340,27 +279,25 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
         mRefreshView.startAnimation(mAnimateToCorrectPosition);
     }
 
-    private void animateOffsetToStartPosition(int from, Animation.AnimationListener listener) {
+    private void animateOffsetToStartPosition() {
         if (mScale) {
-            // Scale the item back down
-            startScaleDownReturnToStartAnimation(from, listener);
+//            startScaleDownReturnToStartAnimation(from, listener);
         } else {
-            mFrom = from;
+            mFrom = mCurrentTargetTop;
             mAnimateToStartPosition.reset();
             mAnimateToStartPosition.setDuration(ANIMATE_TO_START_DURATION);
             mAnimateToStartPosition.setInterpolator(mDecelerateInterpolator);
-            if (listener != null) {
-                mRefreshView.setAnimationListener(listener);
-            }
+            mAnimateToStartPosition.setAnimationListener(mRefreshListener);
+
             mRefreshView.clearAnimation();
             mRefreshView.startAnimation(mAnimateToStartPosition);
         }
     }
 
     void setTargetOffsetTopAndBottom(int offset) {
-        mRefreshView.bringToFront();
+//        mRefreshView.bringToFront();
         mTarget.offsetTopAndBottom(offset);
-        mCurrentTargetOffsetTop = mRefreshView.getTop();
+        mCurrentTargetTop = mRefreshView.getTop();
     }
 
     private void moveToStart(float interpolatedTime) {
@@ -369,13 +306,6 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
         int offset = targetTop - mRefreshView.getTop();
         setTargetOffsetTopAndBottom(offset);
     }
-
-//    private final Animation mAnimateToStartPosition = new Animation() {
-//        @Override
-//        public void applyTransformation(float interpolatedTime, Transformation t) {
-//            moveToStart(interpolatedTime);
-//        }
-//    };
 
 //    private void startScaleDownReturnToStartAnimation(int from,
 //                                                      Animation.AnimationListener listener) {
@@ -426,6 +356,63 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
         }
     }
 
+    private void moveSpinner(float overscrollTop) {
+        float originalDragPercent = overscrollTop / mTotalDragDistance;
+
+        float dragPercent = Math.min(1f, Math.abs(originalDragPercent));
+        float extraOS = Math.abs(overscrollTop) - mTotalDragDistance;
+        float slingshotDist = mUsingCustomStart ? mSpinnerOffsetEnd - mOriginalOffsetTop
+                : mSpinnerOffsetEnd;
+        float tensionSlingshotPercent = Math.max(0, Math.min(extraOS, slingshotDist * 2)
+                / slingshotDist);
+        float tensionPercent = (float) ((tensionSlingshotPercent / 4) - Math.pow(
+                (tensionSlingshotPercent / 4), 2)) * 2f;
+        float extraMove = (slingshotDist) * tensionPercent * 2;
+
+        int targetY = mOriginalOffsetTop + (int) ((slingshotDist * dragPercent) + extraMove);
+        // where 1.0f is a full circle
+        if (mRefreshView.getVisibility() != View.VISIBLE) {
+            mRefreshView.setVisibility(View.VISIBLE);
+        }
+        if (!mScale) {
+            mRefreshView.setScaleX(1f);
+            mRefreshView.setScaleY(1f);
+        }
+
+        setTargetOffsetTopAndBottom(targetY - mCurrentTargetTop);
+    }
+
+    private void finishSpinner(float overscrollTop) {
+        if (overscrollTop > mTotalDragDistance) {
+            setRefreshing(true, true /* notify */);
+        } else {
+            // cancel refresh
+            mRefreshing = false;
+            Animation.AnimationListener listener = null;
+            if (!mScale) {
+                listener = new Animation.AnimationListener() {
+
+                    @Override
+                    public void onAnimationStart(Animation animation) {
+                    }
+
+                    @Override
+                    public void onAnimationEnd(Animation animation) {
+                        if (!mScale) {
+                            startScaleDownAnimation();
+                        }
+                    }
+
+                    @Override
+                    public void onAnimationRepeat(Animation animation) {
+                    }
+
+                };
+            }
+            animateOffsetToStartPosition();
+        }
+    }
+
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
@@ -447,7 +434,7 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
         }
         final int left = getPaddingLeft();
         final int top = getPaddingTop();
-        final int right = left +width - getPaddingRight();
+        final int right = left + width - getPaddingRight();
         final int bottom = top + height - getPaddingBottom();
 
         mTarget.layout(left, top + mTarget.getTop(), right, bottom + mTarget.getTop());
@@ -559,7 +546,6 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
             case MotionEvent.ACTION_MOVE: {
                 pointerIndex = ev.findPointerIndex(mActivePointerId);
                 if (pointerIndex < 0) {
-                    Log.e(TAG, "Got ACTION_MOVE event but have an invalid active pointer id.");
                     return false;
                 }
 
@@ -579,7 +565,6 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
             case MotionEvent.ACTION_POINTER_DOWN: {
                 pointerIndex = ev.getActionIndex();
                 if (pointerIndex < 0) {
-                    Log.e(TAG, "Got ACTION_POINTER_DOWN event but have an invalid action index.");
                     return false;
                 }
                 mActivePointerId = ev.getPointerId(pointerIndex);
@@ -608,7 +593,6 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
             case MotionEvent.ACTION_CANCEL:
                 return false;
         }
-
         return true;
     }
 
