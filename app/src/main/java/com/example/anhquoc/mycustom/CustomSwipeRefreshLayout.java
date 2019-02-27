@@ -68,6 +68,8 @@ public class CustomSwipeRefreshLayout extends ViewGroup {
 
     private boolean mReturningToStart;
 
+    private boolean mUsingCustomStart;
+
     private final DecelerateInterpolator mDecelerateInterpolator;
 
     private static final int[] LAYOUT_ATTRS = new int[]{

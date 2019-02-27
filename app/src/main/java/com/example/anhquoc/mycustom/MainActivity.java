@@ -13,7 +13,10 @@ import com.facebook.drawee.view.SimpleDraweeView;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements CustomSwipeRefresh.OnRefreshListener {
+
+    @BindView(R.id.swipe_refresh_layout)
+    CustomSwipeRefresh mCustomSwipeRefresh;
 
     @BindView(R.id.refreshing_icon)
     SimpleDraweeView mDraweeView;
@@ -28,6 +31,8 @@ public class MainActivity extends AppCompatActivity {
 
         ButterKnife.bind(this);
 
+        mCustomSwipeRefresh.setOnRefreshListener(this);
+
         mUri = new Uri.Builder().scheme(UriUtil.LOCAL_ASSET_SCHEME).path("refreshing_icon.webp").build();
 
         playAnimation();
@@ -40,5 +45,10 @@ public class MainActivity extends AppCompatActivity {
                         .setAutoPlayAnimations(true)
                         .build()
         );
+    }
+
+    @Override
+    public void onRefresh() {
+        mCustomSwipeRefresh.setRefreshing(false);
     }
 }
