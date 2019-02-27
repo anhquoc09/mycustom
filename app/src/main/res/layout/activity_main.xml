@@ -1,29 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.example.anhquoc.mycustom.CustomSwipeRefresh
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<com.example.anhquoc.mycustom.CustomSwipeRefresh xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/swipe_refresh_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity" >
+    android:background="#fafbff"
+    tools:context=".MainActivity">
 
-    <include
-        android:id="@+id/refreshing_layout"
-        layout="@layout/pull_refresh_header_layout"
-        app:layout_constraintBottom_toTopOf="@+id/textView"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <android.support.constraint.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000">
 
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/refreshing_layout" />
+        <com.facebook.drawee.view.SimpleDraweeView
+            android:id="@+id/refreshing_icon"
+            android:layout_width="31dp"
+            android:layout_height="67dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
+    </android.support.constraint.ConstraintLayout>
 </com.example.anhquoc.mycustom.CustomSwipeRefresh>

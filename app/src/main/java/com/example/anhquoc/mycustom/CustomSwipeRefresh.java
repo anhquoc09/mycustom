@@ -41,9 +41,9 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
     public static final int DEFAULT = CircularProgressDrawable.DEFAULT;
 
     @VisibleForTesting
-    static final int CIRCLE_DIAMETER = 40;
+    static final int CIRCLE_DIAMETER = 67;
     @VisibleForTesting
-    static final int CIRCLE_DIAMETER_LARGE = 56;
+    static final int CIRCLE_DIAMETER_LARGE = 67;
 
     private static final String LOG_TAG = android.support.v4.widget.SwipeRefreshLayout.class.getSimpleName();
 
@@ -591,10 +591,10 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         }
         final View child = mTarget;
         final int childLeft = getPaddingLeft();
-        final int childTop = getPaddingTop();
+        final int childTop = getPaddingTop() + mCurrentTargetOffsetTop + mCircleView.getMeasuredHeight();
         final int childWidth = width - getPaddingLeft() - getPaddingRight();
         final int childHeight = height - getPaddingTop() - getPaddingBottom();
-        child.layout(childLeft, mCurrentTargetOffsetTop, childLeft + childWidth, mCurrentTargetOffsetTop + childHeight);
+        child.layout(childLeft, childTop, childLeft + childWidth, childTop + childHeight);
         int circleWidth = mCircleView.getMeasuredWidth();
         int circleHeight = mCircleView.getMeasuredHeight();
         mCircleView.layout((width / 2 - circleWidth / 2), mCurrentTargetOffsetTop,
@@ -610,12 +610,13 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         if (mTarget == null) {
             return;
         }
+        final DisplayMetrics metrics = getResources().getDisplayMetrics();
         mTarget.measure(MeasureSpec.makeMeasureSpec(
                 getMeasuredWidth() - getPaddingLeft() - getPaddingRight(),
                 MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(
                 getMeasuredHeight() - getPaddingTop() - getPaddingBottom(), MeasureSpec.EXACTLY));
-        mCircleView.measure(MeasureSpec.makeMeasureSpec(mCircleDiameter, MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(mCircleDiameter, MeasureSpec.EXACTLY));
+        mCircleView.measure(MeasureSpec.makeMeasureSpec((int)(31 * metrics.density), MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec((int)(67 * metrics.density), MeasureSpec.EXACTLY));
         mCircleViewIndex = -1;
         // Get the index of the circleview.
         for (int index = 0; index < getChildCount(); index++) {

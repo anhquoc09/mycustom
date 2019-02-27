@@ -49,6 +49,5 @@ public class MainActivity extends AppCompatActivity implements CustomSwipeRefres
 
     @Override
     public void onRefresh() {
-        mCustomSwipeRefresh.setRefreshing(false);
     }
 }
