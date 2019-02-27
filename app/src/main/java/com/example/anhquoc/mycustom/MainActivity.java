@@ -2,6 +2,7 @@ package com.example.anhquoc.mycustom;
 
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Toast;
 
@@ -18,8 +19,14 @@ public class MainActivity extends AppCompatActivity implements CustomSwipeRefres
     @BindView(R.id.swipe_refresh_layout)
     CustomSwipeRefresh mCustomSwipeRefresh;
 
-    @BindView(R.id.refreshing_icon)
-    SimpleDraweeView mDraweeView;
+    @BindView(R.id.refreshing_icon1)
+    SimpleDraweeView mDraweeView1;
+
+    @BindView(R.id.refreshing_icon2)
+    SimpleDraweeView mDraweeView2;
+
+    @BindView(R.id.refreshing_icon3)
+    SimpleDraweeView mDraweeView3;
 
     private Uri mUri;
 
@@ -35,11 +42,13 @@ public class MainActivity extends AppCompatActivity implements CustomSwipeRefres
 
         mUri = new Uri.Builder().scheme(UriUtil.LOCAL_ASSET_SCHEME).path("refreshing_icon.webp").build();
 
-        playAnimation();
+        playAnimation(mDraweeView1);
+        playAnimation(mDraweeView2);
+        playAnimation(mDraweeView3);
     }
 
-    private void playAnimation() {
-        mDraweeView.setController(
+    private void playAnimation(SimpleDraweeView view) {
+        view.setController(
                 Fresco.newDraweeControllerBuilder()
                         .setUri(mUri)
                         .setAutoPlayAnimations(true)
@@ -49,5 +58,11 @@ public class MainActivity extends AppCompatActivity implements CustomSwipeRefres
 
     @Override
     public void onRefresh() {
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mCustomSwipeRefresh.setRefreshing(false);
+            }
+        }, 2000);
     }
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_refreshing_1" android:duration="33" />
+    <item android:drawable="@drawable/ic_refreshing_2" android:duration="33" />
+    <item android:drawable="@drawable/ic_refreshing_3" android:duration="33" />
+    <item android:drawable="@drawable/ic_refreshing_4" android:duration="33" />
+    <item android:drawable="@drawable/ic_refreshing_5" android:duration="33" />
+    <item android:drawable="@drawable/ic_refreshing_6" android:duration="33" />
+    <item android:drawable="@drawable/ic_refreshing_7" android:duration="33" />
+    <item android:drawable="@drawable/ic_refreshing_8" android:duration="33" />
+    <item android:drawable="@drawable/ic_refreshing_9" android:duration="33" />
+</animation-list>
