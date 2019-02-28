@@ -13,7 +13,7 @@
         android:layout_width="31dp"
         android:layout_height="67dp"/>
 
-    <com.example.anhquoc.mycustom.CustomSwipeRefresh
+    <com.example.anhquoc.mycustom.CustomSwipeRefreshLayout
         android:id="@+id/swipe_refresh_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -49,5 +49,5 @@
                 app:layout_constraintStart_toStartOf="@id/refreshing_icon2"
                 app:layout_constraintTop_toTopOf="parent" />
         </android.support.constraint.ConstraintLayout>
-    </com.example.anhquoc.mycustom.CustomSwipeRefresh>
+    </com.example.anhquoc.mycustom.CustomSwipeRefreshLayout>
 </LinearLayout>

@@ -4,9 +4,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
-import android.widget.Toast;
 
-import com.example.anhquoc.mycustom.pullrefresh.PullRefreshLayout;
 import com.facebook.common.util.UriUtil;
 import com.facebook.drawee.backends.pipeline.Fresco;
 import com.facebook.drawee.view.SimpleDraweeView;
@@ -14,10 +12,10 @@ import com.facebook.drawee.view.SimpleDraweeView;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity implements CustomSwipeRefresh.OnRefreshListener {
+public class MainActivity extends AppCompatActivity implements CustomSwipeRefreshLayout.OnRefreshListener {
 
     @BindView(R.id.swipe_refresh_layout)
-    CustomSwipeRefresh mCustomSwipeRefresh;
+    CustomSwipeRefreshLayout mCustomSwipeRefresh;
 
     @BindView(R.id.refreshing_icon)
     SimpleDraweeView mDraweeView;
