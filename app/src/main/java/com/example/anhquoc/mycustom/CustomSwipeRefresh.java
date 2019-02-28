@@ -5,7 +5,6 @@ import android.content.res.TypedArray;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
 import android.support.v4.view.NestedScrollingChild;
 import android.support.v4.view.NestedScrollingChildHelper;
 import android.support.v4.view.NestedScrollingParent;
@@ -32,80 +31,116 @@ import com.facebook.drawee.view.SimpleDraweeView;
 
 public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingParent, NestedScrollingChild {
 
-    @VisibleForTesting
-    static final int CIRCLE_DIAMETER = 67;
+    private static final String TAG = CustomSwipeRefresh.class.getSimpleName();
 
-    private static final String TAG = android.support.v4.widget.SwipeRefreshLayout.class.getSimpleName();
+    private static final float DRAG_RATE = 0.5f;
 
     private static final float DECELERATE_INTERPOLATION_FACTOR = 2f;
-    private static final int INVALID_POINTER = -1;
-    private static final float DRAG_RATE = .5f;
 
-    private static final int SCALE_DOWN_DURATION = 150;
+    private static final int REFRESH_ICON_HEIGHT = 67;
+
+    private static final int REFRESH_ICON_WIDTH = 31;
+
+    private static final int INVALID_POINTER = -1;
+
+    private static final int SCALE_DOWN_DURATION = 200;
 
     private static final int ANIMATE_TO_TRIGGER_DURATION = 200;
 
     private static final int ANIMATE_TO_START_DURATION = 200;
 
-    private static final int DEFAULT_CIRCLE_TARGET = 64;
+    private static final int DEFAULT_ICON_OFFSET_END = 70;
 
-    private View mTarget;
-    private OnRefreshListener mListener;
-    boolean mRefreshing = false;
-    private int mTouchSlop;
-    private float mTotalDragDistance = -1;
-
-    private float mTotalUnconsumed;
-    private final NestedScrollingParentHelper mNestedScrollingParentHelper;
-    private final NestedScrollingChildHelper mNestedScrollingChildHelper;
-    private final int[] mParentScrollConsumed = new int[2];
-    private final int[] mParentOffsetInWindow = new int[2];
-    private boolean mNestedScrollInProgress;
-
-    private int mMediumAnimationDuration;
-    private int mCurrentTargetOffsetTop;
-
-    private float mInitialMotionY;
-    private float mInitialDownY;
-    private boolean mIsBeingDragged;
-    private int mActivePointerId = INVALID_POINTER;
-    private boolean mScale;
-
-    private boolean mReturningToStart;
-    private final DecelerateInterpolator mDecelerateInterpolator;
-    private static final int[] LAYOUT_ATTRS = new int[] {
+    private static final int[] LAYOUT_ATTRS = new int[]{
             android.R.attr.enabled
     };
 
     private Uri mUri;
 
+    private View mTarget;
+
     private SimpleDraweeView mDraweeView;
 
-    private int mDraweeViewIndex = -1;
-
-    private int mFrom;
-
-    private float mStartingScale;
-
-    private int mOriginalOffsetTop;
-
-    private int mSpinnerOffsetEnd;
-
-    private Animation mScaleAnimation;
-
-    private Animation mScaleDownAnimation;
-
-    private Animation mScaleDownToStartAnimation;
-
-    private boolean mNotify;
-
-    private int mCircleDiameter;
-
-    private boolean mUsingCustomStart;
+    private OnRefreshListener mListener;
 
     private OnChildScrollUpCallback mChildScrollUpCallback;
 
-    private Animation.AnimationListener mRefreshListener = new Animation.AnimationListener() {
+    private int mFrom;
+
+    private int mOriginalOffsetTop;
+
+    private int mIconOffsetEnd;
+
+    private int mTouchSlop;
+
+    private int mMediumAnimationDuration;
+
+    private int mCurrentOffsetTop;
+
+    private int mActivePointerId = INVALID_POINTER;
+
+    private float mTotalDragDistance;
+
+    private float mTotalUnconsumed;
+
+    private float mInitialMotionY;
+
+    private float mInitialDownY;
+
+    private boolean mNestedScrollInProgress;
+
+    private boolean mRefreshing = false;
+
+    private boolean mIsBeingDragged;
+
+    private boolean mNotify;
+
+    private boolean mReturningToStart;
+
+    private final DecelerateInterpolator mDecelerateInterpolator;
+
+    private final NestedScrollingParentHelper mNestedScrollingParentHelper;
+
+    private final NestedScrollingChildHelper mNestedScrollingChildHelper;
+
+    private final int[] mParentScrollConsumed = new int[2];
+
+    private final int[] mParentOffsetInWindow = new int[2];
+
+    private final Animation mScaleUpAnimation = new Animation() {
+        @Override
+        public void applyTransformation(float interpolatedTime, Transformation t) {
+            setIconScale(interpolatedTime);
+        }
+    };
+
+    private final Animation mScaleDownToStartAnimation = new Animation() {
+        @Override
+        public void applyTransformation(float interpolatedTime, Transformation t) {
+            setIconScale(1 - interpolatedTime);
+            mFrom = mCurrentOffsetTop;
+            moveToStart(interpolatedTime);
+        }
+    };
+
+    private final Animation mAnimateToCorrectPosition = new Animation() {
+        @Override
+        public void applyTransformation(float interpolatedTime, Transformation t) {
+            int endTarget = mIconOffsetEnd - Math.abs(mOriginalOffsetTop);
+            int targetTop = (mFrom + (int) ((endTarget - mFrom) * interpolatedTime));
+            int offset = targetTop - mDraweeView.getTop();
+            setTargetOffsetTopAndBottom(offset);
+        }
+    };
+
+    private final Animation mAnimateToStartPosition = new Animation() {
+        @Override
+        public void applyTransformation(float interpolatedTime, Transformation t) {
+            moveToStart(interpolatedTime);
+        }
+    };
+
+    private final Animation.AnimationListener mRefreshListener = new Animation.AnimationListener() {
         @Override
         public void onAnimationStart(Animation animation) {
         }
@@ -122,7 +157,7 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
                         mListener.onRefresh();
                     }
                 }
-                mCurrentTargetOffsetTop = mDraweeView.getTop();
+                mCurrentOffsetTop = mDraweeView.getTop();
             } else {
                 reset();
             }
@@ -132,12 +167,9 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
     void reset() {
         mDraweeView.clearAnimation();
         mDraweeView.setVisibility(View.GONE);
-        if (mScale) {
-            setAnimationProgress(0);
-        } else {
-            setTargetOffsetTopAndBottom(mOriginalOffsetTop - mCurrentTargetOffsetTop);
-        }
-        mCurrentTargetOffsetTop = mDraweeView.getTop();
+
+        setTargetOffsetTopAndBottom(mOriginalOffsetTop - mCurrentOffsetTop);
+        mCurrentOffsetTop = mDraweeView.getTop();
     }
 
     @Override
@@ -169,36 +201,22 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         mDecelerateInterpolator = new DecelerateInterpolator(DECELERATE_INTERPOLATION_FACTOR);
 
         final DisplayMetrics metrics = getResources().getDisplayMetrics();
-        mCircleDiameter = (int) (CIRCLE_DIAMETER * metrics.density);
+        int iconHeight = (int) (REFRESH_ICON_HEIGHT * metrics.density);
 
         createProgressView();
-        ViewCompat.setChildrenDrawingOrderEnabled(this, true);
-        mSpinnerOffsetEnd = (int) (DEFAULT_CIRCLE_TARGET * metrics.density);
-        mTotalDragDistance = mSpinnerOffsetEnd;
+        mIconOffsetEnd = (int) (DEFAULT_ICON_OFFSET_END * metrics.density);
+        mTotalDragDistance = mIconOffsetEnd;
 
         mNestedScrollingParentHelper = new NestedScrollingParentHelper(this);
         mNestedScrollingChildHelper = new NestedScrollingChildHelper(this);
         setNestedScrollingEnabled(true);
 
-        mOriginalOffsetTop = mCurrentTargetOffsetTop = -mCircleDiameter;
+        mOriginalOffsetTop = mCurrentOffsetTop = -iconHeight;
         moveToStart(1.0f);
 
         final TypedArray a = context.obtainStyledAttributes(attrs, LAYOUT_ATTRS);
         setEnabled(a.getBoolean(0, true));
         a.recycle();
-    }
-
-    @Override
-    protected int getChildDrawingOrder(int childCount, int i) {
-        if (mDraweeViewIndex < 0) {
-            return i;
-        } else if (i == childCount - 1) {
-            return mDraweeViewIndex;
-        } else if (i >= mDraweeViewIndex) {
-            return i + 1;
-        } else {
-            return i;
-        }
     }
 
     private void createProgressView() {
@@ -228,13 +246,8 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
     public void setRefreshing(boolean refreshing) {
         if (refreshing && mRefreshing != refreshing) {
             mRefreshing = refreshing;
-            int endTarget;
-            if (!mUsingCustomStart) {
-                endTarget = mSpinnerOffsetEnd + mOriginalOffsetTop;
-            } else {
-                endTarget = mSpinnerOffsetEnd;
-            }
-            setTargetOffsetTopAndBottom(endTarget - mCurrentTargetOffsetTop);
+            int endTarget = mIconOffsetEnd + mOriginalOffsetTop;
+            setTargetOffsetTopAndBottom(endTarget - mCurrentOffsetTop);
             mNotify = false;
             startScaleUpAnimation(mRefreshListener);
         } else {
@@ -242,68 +255,22 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         }
     }
 
-    private void startScaleUpAnimation(Animation.AnimationListener listener) {
-        mDraweeView.setVisibility(View.VISIBLE);
-
-        mScaleAnimation = new Animation() {
-            @Override
-            public void applyTransformation(float interpolatedTime, Transformation t) {
-                setAnimationProgress(interpolatedTime);
-            }
-        };
-        mScaleAnimation.setDuration(mMediumAnimationDuration);
-        if (listener != null) {
-            mScaleAnimation.setAnimationListener(listener);
-        }
-        mDraweeView.clearAnimation();
-        mDraweeView.startAnimation(mScaleAnimation);
-    }
-
-    void setAnimationProgress(float progress) {
-        mDraweeView.setScaleX(progress);
-        mDraweeView.setScaleY(progress);
-    }
-
-    private void setRefreshing(boolean refreshing, final boolean notify) {
-        if (mRefreshing != refreshing) {
-            mNotify = notify;
-            ensureTarget();
-            mRefreshing = refreshing;
-            if (mRefreshing) {
-                animateOffsetToCorrectPosition(mCurrentTargetOffsetTop, mRefreshListener);
-            } else {
-                startScaleDownAnimation(mRefreshListener);
-            }
-        }
-    }
-
-    void startScaleDownAnimation(Animation.AnimationListener listener) {
-        mScaleDownAnimation = new Animation() {
-            @Override
-            public void applyTransformation(float interpolatedTime, Transformation t) {
-                setAnimationProgress(1 - interpolatedTime);
-            }
-        };
-        mScaleDownAnimation.setDuration(SCALE_DOWN_DURATION);
-        mScaleDownAnimation.setAnimationListener(listener);
-        mDraweeView.clearAnimation();
-        mDraweeView.startAnimation(mScaleDownAnimation);
-    }
-
     public boolean isRefreshing() {
         return mRefreshing;
     }
 
-    private void ensureTarget() {
-        if (mTarget == null) {
-            for (int i = 0; i < getChildCount(); i++) {
-                View child = getChildAt(i);
-                if (!child.equals(mDraweeView)) {
-                    mTarget = child;
-                    break;
-                }
-            }
+    public boolean canChildScrollUp() {
+        if (mChildScrollUpCallback != null) {
+            return mChildScrollUpCallback.canChildScrollUp(this, mTarget);
         }
+        if (mTarget instanceof ListView) {
+            return ListViewCompat.canScrollList((ListView) mTarget, -1);
+        }
+        return mTarget.canScrollVertically(-1);
+    }
+
+    public void setOnChildScrollUpCallback(@Nullable OnChildScrollUpCallback callback) {
+        mChildScrollUpCallback = callback;
     }
 
     public void setDistanceToTriggerSync(int distance) {
@@ -323,16 +290,18 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         if (mTarget == null) {
             return;
         }
-        final View child = mTarget;
+
+        int iconWidth = mDraweeView.getMeasuredWidth();
+        int iconHeight = mDraweeView.getMeasuredHeight();
+        int iconTop = getPaddingTop() + mCurrentOffsetTop;
+        int iconBottom = iconTop + iconHeight;
+        mDraweeView.layout((width / 2 - iconWidth / 2), iconTop, (width / 2 + iconWidth / 2), iconBottom);
+
         final int childLeft = getPaddingLeft();
-        final int childTop = getPaddingTop() + mCurrentTargetOffsetTop + mDraweeView.getMeasuredHeight();
+        final int childTop = mCurrentOffsetTop + iconHeight;
         final int childWidth = width - getPaddingLeft() - getPaddingRight();
         final int childHeight = height - getPaddingTop() - getPaddingBottom();
-        child.layout(childLeft, childTop, childLeft + childWidth, childTop + childHeight);
-        int circleWidth = mDraweeView.getMeasuredWidth();
-        int circleHeight = mDraweeView.getMeasuredHeight();
-        mDraweeView.layout((width / 2 - circleWidth / 2), mCurrentTargetOffsetTop,
-                (width / 2 + circleWidth / 2), mCurrentTargetOffsetTop + circleHeight);
+        mTarget.layout(childLeft, childTop, childLeft + childWidth, childTop + childHeight);
     }
 
     @Override
@@ -344,34 +313,14 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         if (mTarget == null) {
             return;
         }
-        final DisplayMetrics metrics = getResources().getDisplayMetrics();
         mTarget.measure(MeasureSpec.makeMeasureSpec(
-                getMeasuredWidth() - getPaddingLeft() - getPaddingRight(),
-                MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(
-                getMeasuredHeight() - getPaddingTop() - getPaddingBottom(), MeasureSpec.EXACTLY));
-        mDraweeView.measure(MeasureSpec.makeMeasureSpec((int)(31 * metrics.density), MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec((int)(67 * metrics.density), MeasureSpec.EXACTLY));
-        mDraweeViewIndex = -1;
-        for (int index = 0; index < getChildCount(); index++) {
-            if (getChildAt(index) == mDraweeView) {
-                mDraweeViewIndex = index;
-                break;
-            }
-        }
-    }
+                getMeasuredWidth() - getPaddingLeft() - getPaddingRight(), MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(
+                        getMeasuredHeight() - getPaddingTop() - getPaddingBottom(), MeasureSpec.EXACTLY));
 
-    public boolean canChildScrollUp() {
-        if (mChildScrollUpCallback != null) {
-            return mChildScrollUpCallback.canChildScrollUp(this, mTarget);
-        }
-        if (mTarget instanceof ListView) {
-            return ListViewCompat.canScrollList((ListView) mTarget, -1);
-        }
-        return mTarget.canScrollVertically(-1);
-    }
-
-    public void setOnChildScrollUpCallback(@Nullable OnChildScrollUpCallback callback) {
-        mChildScrollUpCallback = callback;
+        final DisplayMetrics metrics = getResources().getDisplayMetrics();
+        mDraweeView.measure(MeasureSpec.makeMeasureSpec((int) (REFRESH_ICON_WIDTH * metrics.density), MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec((int) (REFRESH_ICON_HEIGHT * metrics.density), MeasureSpec.EXACTLY));
     }
 
     @Override
@@ -457,7 +406,7 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
     }
 
     @Override
-    public void onNestedPreScroll(@NonNull View target, int dx, int dy,@NonNull int[] consumed) {
+    public void onNestedPreScroll(@NonNull View target, int dx, int dy, @NonNull int[] consumed) {
         if (dy > 0 && mTotalUnconsumed > 0) {
             if (dy > mTotalUnconsumed) {
                 consumed[1] = dy - (int) mTotalUnconsumed;
@@ -466,12 +415,7 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
                 mTotalUnconsumed -= dy;
                 consumed[1] = dy;
             }
-            moveSpinner(mTotalUnconsumed);
-        }
-
-        if (mUsingCustomStart && dy > 0 && mTotalUnconsumed == 0
-                && Math.abs(dy - consumed[1]) > 0) {
-            mDraweeView.setVisibility(View.GONE);
+            moveIcon(mTotalUnconsumed);
         }
 
         final int[] parentConsumed = mParentScrollConsumed;
@@ -492,7 +436,7 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         mNestedScrollInProgress = false;
 
         if (mTotalUnconsumed > 0) {
-            finishSpinner(mTotalUnconsumed);
+            finishMoveIcon(mTotalUnconsumed);
             mTotalUnconsumed = 0;
         }
         stopNestedScroll();
@@ -507,7 +451,7 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         final int dy = dyUnconsumed + mParentOffsetInWindow[1];
         if (dy < 0 && !canChildScrollUp()) {
             mTotalUnconsumed += Math.abs(dy);
-            moveSpinner(mTotalUnconsumed);
+            moveIcon(mTotalUnconsumed);
         }
     }
 
@@ -570,64 +514,6 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         return mNestedScrollingChildHelper.dispatchNestedPreFling(velocityX, velocityY);
     }
 
-    private void moveSpinner(float overScrollTop) {
-        float originalDragPercent = overScrollTop / mTotalDragDistance;
-
-        float dragPercent = Math.min(1f, Math.abs(originalDragPercent));
-        float extraOS = Math.abs(overScrollTop) - mTotalDragDistance;
-        float slingshotDist = mUsingCustomStart ? mSpinnerOffsetEnd - mOriginalOffsetTop
-                : mSpinnerOffsetEnd;
-        float tensionSlingshotPercent = Math.max(0, Math.min(extraOS, slingshotDist * 2)
-                / slingshotDist);
-        float tensionPercent = (float) ((tensionSlingshotPercent / 4) - Math.pow(
-                (tensionSlingshotPercent / 4), 2)) * 2f;
-        float extraMove = (slingshotDist) * tensionPercent * 2;
-
-        int targetY = mOriginalOffsetTop + (int) ((slingshotDist * dragPercent) + extraMove);
-        if (mDraweeView.getVisibility() != View.VISIBLE) {
-            mDraweeView.setVisibility(View.VISIBLE);
-        }
-        if (!mScale) {
-            mDraweeView.setScaleX(1f);
-            mDraweeView.setScaleY(1f);
-        }
-
-        if (mScale) {
-            setAnimationProgress(Math.min(1f, overScrollTop / mTotalDragDistance));
-        }
-        setTargetOffsetTopAndBottom(targetY - mCurrentTargetOffsetTop);
-    }
-
-    private void finishSpinner(float overScrollTop) {
-        if (overScrollTop > mTotalDragDistance) {
-            setRefreshing(true, true);
-        } else {
-            mRefreshing = false;
-            Animation.AnimationListener listener = null;
-
-            if (!mScale) {
-                listener = new Animation.AnimationListener() {
-
-                    @Override
-                    public void onAnimationStart(Animation animation) {
-                    }
-
-                    @Override
-                    public void onAnimationEnd(Animation animation) {
-                        if (!mScale) {
-                            startScaleDownAnimation(null);
-                        }
-                    }
-
-                    @Override
-                    public void onAnimationRepeat(Animation animation) {
-                    }
-                };
-            }
-            animateOffsetToStartPosition(mCurrentTargetOffsetTop, listener);
-        }
-    }
-
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         final int action = ev.getActionMasked();
@@ -660,7 +546,7 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
                 if (mIsBeingDragged) {
                     final float overScrollTop = (y - mInitialMotionY) * DRAG_RATE;
                     if (overScrollTop > 0) {
-                        moveSpinner(overScrollTop);
+                        moveIcon(overScrollTop);
                     } else {
                         return false;
                     }
@@ -692,7 +578,7 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
                     final float y = ev.getY(pointerIndex);
                     final float overScrollTop = (y - mInitialMotionY) * DRAG_RATE;
                     mIsBeingDragged = false;
-                    finishSpinner(overScrollTop);
+                    finishMoveIcon(overScrollTop);
                 }
                 mActivePointerId = INVALID_POINTER;
                 return false;
@@ -704,6 +590,61 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         return true;
     }
 
+    private void ensureTarget() {
+        if (mTarget == null) {
+            for (int i = 0; i < getChildCount(); i++) {
+                View child = getChildAt(i);
+                if (!child.equals(mDraweeView)) {
+                    mTarget = child;
+                    break;
+                }
+            }
+        }
+    }
+
+    private void moveIcon(float overScrollTop) {
+        float originalDragPercent = overScrollTop / mTotalDragDistance;
+
+        float dragPercent = Math.min(1f, Math.abs(originalDragPercent));
+        float extraOS = Math.abs(overScrollTop) - mTotalDragDistance;
+        float tensionSlingshotPercent = Math.max(0, Math.min(extraOS, mIconOffsetEnd * 2) / mIconOffsetEnd);
+        float tensionPercent = (float) ((tensionSlingshotPercent / 4) - Math.pow((tensionSlingshotPercent / 4), 2)) * 2f;
+        float extraMove = (mIconOffsetEnd) * tensionPercent * 2;
+
+        int targetY = mOriginalOffsetTop + (int) ((mIconOffsetEnd * dragPercent) + extraMove);
+        if (mDraweeView.getVisibility() != View.VISIBLE) {
+            mDraweeView.setVisibility(View.VISIBLE);
+        }
+        float scale = Math.min(Math.abs((mTotalDragDistance + mCurrentOffsetTop) / mTotalDragDistance), 1);
+        setIconScale(scale);
+
+        setTargetOffsetTopAndBottom(targetY - mCurrentOffsetTop);
+
+    }
+
+    private void finishMoveIcon(float overScrollTop) {
+        if (overScrollTop > mTotalDragDistance) {
+            setRefreshing(true, true);
+        } else {
+            mRefreshing = false;
+            Animation.AnimationListener listener = new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    startScaleDownToStartAnimation(null);
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+                }
+            };
+            animateOffsetToStartPosition(mCurrentOffsetTop, listener);
+        }
+    }
+
     private void startDragging(float y) {
         final float yDiff = y - mInitialDownY;
         if (yDiff > mTouchSlop && !mIsBeingDragged) {
@@ -712,49 +653,23 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         }
     }
 
-    private void animateOffsetToCorrectPosition(int from, Animation.AnimationListener listener) {
-        mFrom = from;
-        mAnimateToCorrectPosition.reset();
-        mAnimateToCorrectPosition.setDuration(ANIMATE_TO_TRIGGER_DURATION);
-        mAnimateToCorrectPosition.setInterpolator(mDecelerateInterpolator);
-        if (listener != null) {
-            mAnimateToCorrectPosition.setAnimationListener(listener);
-        }
-        mDraweeView.clearAnimation();
-        mDraweeView.startAnimation(mAnimateToCorrectPosition);
+    private void setIconScale(float scale) {
+        mDraweeView.setScaleX(scale);
+        mDraweeView.setScaleY(scale);
     }
 
-    private void animateOffsetToStartPosition(int from, Animation.AnimationListener listener) {
-        if (mScale) {
-            startScaleDownReturnToStartAnimation(from, listener);
-        } else {
-            mFrom = from;
-            mAnimateToStartPosition.reset();
-            mAnimateToStartPosition.setDuration(ANIMATE_TO_START_DURATION);
-            mAnimateToStartPosition.setInterpolator(mDecelerateInterpolator);
-            if (listener != null) {
-                mAnimateToStartPosition.setAnimationListener(listener);
-            }
-            mDraweeView.clearAnimation();
-            mDraweeView.startAnimation(mAnimateToStartPosition);
-        }
-    }
-
-    private final Animation mAnimateToCorrectPosition = new Animation() {
-        @Override
-        public void applyTransformation(float interpolatedTime, Transformation t) {
-            int targetTop;
-            int endTarget;
-            if (!mUsingCustomStart) {
-                endTarget = mSpinnerOffsetEnd - Math.abs(mOriginalOffsetTop);
+    private void setRefreshing(boolean refreshing, final boolean notify) {
+        if (mRefreshing != refreshing) {
+            mNotify = notify;
+            ensureTarget();
+            mRefreshing = refreshing;
+            if (mRefreshing) {
+                animateOffsetToCorrectPosition(mCurrentOffsetTop, mRefreshListener);
             } else {
-                endTarget = mSpinnerOffsetEnd;
+                startScaleDownToStartAnimation(mRefreshListener);
             }
-            targetTop = (mFrom + (int) ((endTarget - mFrom) * interpolatedTime));
-            int offset = targetTop - mDraweeView.getTop();
-            setTargetOffsetTopAndBottom(offset);
         }
-    };
+    }
 
     private void moveToStart(float interpolatedTime) {
         int targetTop = (mFrom + (int) ((mOriginalOffsetTop - mFrom) * interpolatedTime));
@@ -762,36 +677,10 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
         setTargetOffsetTopAndBottom(offset);
     }
 
-    private final Animation mAnimateToStartPosition = new Animation() {
-        @Override
-        public void applyTransformation(float interpolatedTime, Transformation t) {
-            moveToStart(interpolatedTime);
-        }
-    };
-
-    private void startScaleDownReturnToStartAnimation(int from, Animation.AnimationListener listener) {
-        mFrom = from;
-        mStartingScale = mDraweeView.getScaleX();
-        mScaleDownToStartAnimation = new Animation() {
-            @Override
-            public void applyTransformation(float interpolatedTime, Transformation t) {
-                float targetScale = (mStartingScale + (-mStartingScale  * interpolatedTime));
-                setAnimationProgress(targetScale);
-                moveToStart(interpolatedTime);
-            }
-        };
-        mScaleDownToStartAnimation.setDuration(SCALE_DOWN_DURATION);
-        if (listener != null) {
-            mScaleDownToStartAnimation.setAnimationListener(listener);
-        }
-        mDraweeView.clearAnimation();
-        mDraweeView.startAnimation(mScaleDownToStartAnimation);
-    }
-
     private void setTargetOffsetTopAndBottom(int offset) {
         mDraweeView.bringToFront();
         ViewCompat.offsetTopAndBottom(mDraweeView, offset);
-        mCurrentTargetOffsetTop = mDraweeView.getTop();
+        mCurrentOffsetTop = mDraweeView.getTop();
     }
 
     private void onSecondaryPointerUp(MotionEvent ev) {
@@ -801,6 +690,47 @@ public class CustomSwipeRefresh extends ViewGroup implements NestedScrollingPare
             int newPointerIndex = pointerIndex == 0 ? 1 : 0;
             mActivePointerId = ev.getPointerId(newPointerIndex);
         }
+    }
+
+    private void startScaleUpAnimation(Animation.AnimationListener listener) {
+        mScaleUpAnimation.reset();
+        mScaleUpAnimation.setDuration(mMediumAnimationDuration);
+        mScaleUpAnimation.setAnimationListener(listener);
+
+        mDraweeView.setVisibility(View.VISIBLE);
+        mDraweeView.clearAnimation();
+        mDraweeView.startAnimation(mScaleUpAnimation);
+    }
+
+    private void startScaleDownToStartAnimation(Animation.AnimationListener listener) {
+        mScaleDownToStartAnimation.reset();
+        mScaleDownToStartAnimation.setDuration(SCALE_DOWN_DURATION);
+        mScaleDownToStartAnimation.setAnimationListener(listener);
+
+        mDraweeView.clearAnimation();
+        mDraweeView.startAnimation(mScaleDownToStartAnimation);
+    }
+
+    private void animateOffsetToCorrectPosition(int from, Animation.AnimationListener listener) {
+        mFrom = from;
+        mAnimateToCorrectPosition.reset();
+        mAnimateToCorrectPosition.setDuration(ANIMATE_TO_TRIGGER_DURATION);
+        mAnimateToCorrectPosition.setInterpolator(mDecelerateInterpolator);
+        mAnimateToCorrectPosition.setAnimationListener(listener);
+
+        mDraweeView.clearAnimation();
+        mDraweeView.startAnimation(mAnimateToCorrectPosition);
+    }
+
+    private void animateOffsetToStartPosition(int from, Animation.AnimationListener listener) {
+        mFrom = from;
+        mAnimateToStartPosition.reset();
+        mAnimateToStartPosition.setDuration(ANIMATE_TO_START_DURATION);
+        mAnimateToStartPosition.setInterpolator(mDecelerateInterpolator);
+        mAnimateToStartPosition.setAnimationListener(listener);
+
+        mDraweeView.clearAnimation();
+        mDraweeView.startAnimation(mAnimateToStartPosition);
     }
 
     /**

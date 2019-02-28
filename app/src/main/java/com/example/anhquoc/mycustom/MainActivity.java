@@ -19,6 +19,9 @@ public class MainActivity extends AppCompatActivity implements CustomSwipeRefres
     @BindView(R.id.swipe_refresh_layout)
     CustomSwipeRefresh mCustomSwipeRefresh;
 
+    @BindView(R.id.refreshing_icon)
+    SimpleDraweeView mDraweeView;
+
     @BindView(R.id.refreshing_icon1)
     SimpleDraweeView mDraweeView1;
 
@@ -42,6 +45,7 @@ public class MainActivity extends AppCompatActivity implements CustomSwipeRefres
 
         mUri = new Uri.Builder().scheme(UriUtil.LOCAL_ASSET_SCHEME).path("refreshing_icon.webp").build();
 
+        playAnimation(mDraweeView);
         playAnimation(mDraweeView1);
         playAnimation(mDraweeView2);
         playAnimation(mDraweeView3);
