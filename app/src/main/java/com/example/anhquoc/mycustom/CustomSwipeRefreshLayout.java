@@ -2,6 +2,7 @@ package com.example.anhquoc.mycustom;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.drawable.AnimationDrawable;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -22,6 +23,7 @@ import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Transformation;
 import android.widget.AbsListView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 
@@ -55,15 +57,17 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
             android.R.attr.enabled
     };
 
-    private Uri mUri;
-
     private View mTarget;
 
-    private SimpleDraweeView mDraweeView;
+    private ImageView mDraweeView;
+
+    private AnimationDrawable mAnimationDrawable;
 
     private OnRefreshListener mListener;
 
     private OnChildScrollUpCallback mChildScrollUpCallback;
+
+    private float mScale = 0;
 
     private int mFrom;
 
@@ -165,6 +169,7 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
     };
 
     void reset() {
+        mAnimationDrawable.stop();
         mDraweeView.clearAnimation();
         mDraweeView.setVisibility(View.GONE);
 
@@ -220,23 +225,14 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
     }
 
     private void createProgressView() {
-        mUri = new Uri.Builder().scheme(UriUtil.LOCAL_ASSET_SCHEME).path("refreshing_icon.webp").build();
+        mAnimationDrawable = (AnimationDrawable) getResources().getDrawable(R.drawable.live_refresh_anim);
 
-        mDraweeView = new SimpleDraweeView(getContext());
-        mDraweeView.setLayoutParams(new LinearLayout.LayoutParams(31, 67));
+        mDraweeView = new ImageView(getContext());
+        mDraweeView.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
 
         mDraweeView.setVisibility(View.GONE);
+        mDraweeView.setImageDrawable(mAnimationDrawable);
         addView(mDraweeView);
-        autoPlayRefreshAnimation();
-    }
-
-    private void autoPlayRefreshAnimation() {
-        mDraweeView.setController(
-                Fresco.newDraweeControllerBuilder()
-                        .setUri(mUri)
-                        .setAutoPlayAnimations(true)
-                        .build()
-        );
     }
 
     public void setOnRefreshListener(OnRefreshListener listener) {
@@ -291,8 +287,8 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
             return;
         }
 
-        int iconWidth = mDraweeView.getMeasuredWidth();
-        int iconHeight = mDraweeView.getMeasuredHeight();
+        int iconWidth = (int) (mDraweeView.getMeasuredWidth());
+        int iconHeight = (int) (mDraweeView.getMeasuredHeight());
         int iconTop = getPaddingTop() + mCurrentOffsetTop;
         int iconBottom = iconTop + iconHeight;
         mDraweeView.layout((width / 2 - iconWidth / 2), iconTop, (width / 2 + iconWidth / 2), iconBottom);
@@ -353,7 +349,6 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
 
             case MotionEvent.ACTION_MOVE:
                 if (mActivePointerId == INVALID_POINTER) {
-                    Log.e(TAG, "Got ACTION_MOVE event but don't have an active pointer id.");
                     return false;
                 }
 
@@ -517,7 +512,7 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         final int action = ev.getActionMasked();
-        int pointerIndex;
+        int pointerIndex = -1;
 
         if (mReturningToStart && action == MotionEvent.ACTION_DOWN) {
             mReturningToStart = false;
@@ -536,7 +531,6 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
             case MotionEvent.ACTION_MOVE: {
                 pointerIndex = ev.findPointerIndex(mActivePointerId);
                 if (pointerIndex < 0) {
-                    Log.e(TAG, "Got ACTION_MOVE event but have an invalid active pointer id.");
                     return false;
                 }
 
@@ -570,7 +564,6 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
             case MotionEvent.ACTION_UP: {
                 pointerIndex = ev.findPointerIndex(mActivePointerId);
                 if (pointerIndex < 0) {
-                    Log.e(TAG, "Got ACTION_UP event but don't have an active pointer id.");
                     return false;
                 }
 
@@ -614,12 +607,12 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
         int targetY = mOriginalOffsetTop + (int) ((mIconOffsetEnd * dragPercent) + extraMove);
         if (mDraweeView.getVisibility() != View.VISIBLE) {
             mDraweeView.setVisibility(View.VISIBLE);
+            mAnimationDrawable.start();
         }
         float scale = Math.min(Math.abs((mTotalDragDistance + mCurrentOffsetTop) / mTotalDragDistance), 1);
         setIconScale(scale);
 
         setTargetOffsetTopAndBottom(targetY - mCurrentOffsetTop);
-
     }
 
     private void finishMoveIcon(float overScrollTop) {
@@ -634,7 +627,7 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
 
                 @Override
                 public void onAnimationEnd(Animation animation) {
-                    startScaleDownToStartAnimation(null);
+                    startScaleDownToStartAnimation(mRefreshListener);
                 }
 
                 @Override
@@ -654,8 +647,7 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
     }
 
     private void setIconScale(float scale) {
-        mDraweeView.setScaleX(scale);
-        mDraweeView.setScaleY(scale);
+        mScale = scale;
     }
 
     private void setRefreshing(boolean refreshing, final boolean notify) {
@@ -700,6 +692,8 @@ public class CustomSwipeRefreshLayout extends ViewGroup implements NestedScrolli
         mDraweeView.setVisibility(View.VISIBLE);
         mDraweeView.clearAnimation();
         mDraweeView.startAnimation(mScaleUpAnimation);
+
+        mAnimationDrawable.start();
     }
 
     private void startScaleDownToStartAnimation(Animation.AnimationListener listener) {
