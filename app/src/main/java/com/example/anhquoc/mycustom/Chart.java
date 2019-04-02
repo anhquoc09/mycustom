@@ -16,7 +16,7 @@ import com.example.anhquoc.mycustom.charts.BarEntry;
 
 import java.text.DecimalFormat;
 
-public class Chart extends View{
+public class Chart extends View {
 
         private Paint mPaint;
 

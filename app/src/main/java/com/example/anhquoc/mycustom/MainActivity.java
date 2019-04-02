@@ -1,9 +1,5 @@
 package com.example.anhquoc.mycustom;
 
-import androidx.appcompat.app.AppCompatActivity;
-import butterknife.BindView;
-import butterknife.ButterKnife;
-
 import android.os.Bundle;
 import android.widget.TextView;
 
@@ -14,6 +10,10 @@ import com.example.anhquoc.mycustom.charts.Entry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
+import androidx.appcompat.app.AppCompatActivity;
+import butterknife.BindView;
+import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity implements OnItemSelectedListener{
 
@@ -55,14 +55,14 @@ public class MainActivity extends AppCompatActivity implements OnItemSelectedLis
         mEntries.add(new BarEntry("5", 50));
         mEntries.add(new BarEntry("6", 25));
 
-        mBarChart.add(mEntries);
+//        mBarChart.add(mEntries);
 
-        mTextMax.setText(String.format(Locale.US, "%s: %.1f", "Max", mBarChart.getMaxValue()));
+        mTextMax.setText(String.format(Locale.US, "Max: %.1f", mBarChart.getMaxValue()));
     }
 
     @Override
     public void onItemSelected(Entry entry) {
-        mTextSelected.setText(String.format(Locale.US, "%s: %.1f", "Selected", entry.getValue()));
+        mTextSelected.setText(String.format(Locale.US, "Selected: %.1f", entry.getValue()));
     }
 
     @Override

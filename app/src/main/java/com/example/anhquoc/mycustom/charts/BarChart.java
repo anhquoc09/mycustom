@@ -8,9 +8,6 @@ import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Shader;
-
-import androidx.annotation.Nullable;
-
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
@@ -26,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import androidx.annotation.Nullable;
+
 public class BarChart extends View {
 
     private Context mContext;
@@ -34,9 +33,9 @@ public class BarChart extends View {
 
     private static final int ALPHA_SELECTED = 255;
 
-    private static final int ALPHA_UNSELECTED = 150;
+    private static final int ALPHA_UNSELECTED = 255;
 
-    private static final int ALPHA_BACKGROUND = 50;
+    private static final int ALPHA_BACKGROUND = 255;
 
     private static final float DEFAULT_BAR_DISTANCE = 10;
 
@@ -52,7 +51,7 @@ public class BarChart extends View {
 
     private static final int NUMOF_BASELINE = 5;
 
-    private static final int SELECTED_DOT_RAIDUS = 5;
+    private static final int SELECTED_DOT_RADIUS = 5;
 
     private final List<BarEntry> mEntries = new ArrayList<>();
 
@@ -184,7 +183,7 @@ public class BarChart extends View {
         if (dY >= mContentRect.top && dY <= mContentRect.bottom) {
             mLinePaint.setAlpha(ALPHA_SELECTED);
             canvas.drawLine(mContentRect.left, dY, mContentRect.right, dY, mLinePaint);
-            canvas.drawCircle(dX + SELECTED_DOT_RAIDUS, dY, SELECTED_DOT_RAIDUS, mDotPaint);
+            canvas.drawCircle(dX + SELECTED_DOT_RADIUS, dY, SELECTED_DOT_RADIUS, mDotPaint);
         }
     }
 
