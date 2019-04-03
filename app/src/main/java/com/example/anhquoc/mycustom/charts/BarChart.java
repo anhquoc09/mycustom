@@ -6,6 +6,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.AttributeSet;
@@ -114,6 +115,25 @@ public class BarChart extends View {
         initPaint();
     }
 
+    private void initPaint() {
+        mBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mBarPaint.setColor(mColor);
+        mGradient = new LinearGradient(0, 0, 0, 800,
+                Color.CYAN, Color.BLUE, Shader.TileMode.REPEAT);
+        mBarPaint.setShader(mGradient);
+
+        mLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mLinePaint.setColor(mColor);
+        mLinePaint.setStrokeWidth(1f);
+
+        mLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mLabelPaint.setColor(mColor);
+        mLabelPaint.setTextSize(getTextSize());
+
+        mDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mDotPaint.setColor(Color.WHITE);
+    }
+
     public BarChart(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
 
@@ -134,25 +154,6 @@ public class BarChart extends View {
         typedArray.recycle();
 
         initPaint();
-    }
-
-    private void initPaint() {
-        mBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mBarPaint.setColor(mColor);
-        mGradient = new LinearGradient(0, 0, 0, 800,
-                Color.CYAN, Color.BLUE, Shader.TileMode.REPEAT);
-        mBarPaint.setShader(mGradient);
-
-        mLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mLinePaint.setColor(mColor);
-        mLinePaint.setStrokeWidth(1f);
-
-        mLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mLabelPaint.setColor(mColor);
-        mLabelPaint.setTextSize(getTextSize());
-
-        mDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mDotPaint.setColor(Color.WHITE);
     }
 
     @Override
@@ -176,6 +177,8 @@ public class BarChart extends View {
 
         drawBackground(canvas);
 
+        canvas.clipRect(mContentRect);
+//        canvas.scale(mScale, mScale);
         drawEntries(canvas);
     }
 
@@ -303,7 +306,7 @@ public class BarChart extends View {
     private RectF getContentRect() {
         mContentRect.set(0,
                 getLabelAndAxisPadding(),
-                getWidth() - String.format(Locale.US, "%.01f", mMaxYAxis).length() * getTextSize() * 2 / 3,
+                getWidth() - mLabelPaint.measureText(String.valueOf(mMaxValue)) - getLabelAndAxisPadding(),
                 getHeight() - (getTextSize() + getLabelAndAxisPadding() * 2));
         return mContentRect;
     }

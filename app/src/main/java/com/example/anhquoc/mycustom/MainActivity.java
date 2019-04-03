@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity implements OnItemSelectedLis
         mEntries.add(new BarEntry("5", 50));
         mEntries.add(new BarEntry("6", 25));
 
-//        mBarChart.add(mEntries);
+        mBarChart.add(mEntries);
 
         mTextMax.setText(String.format(Locale.US, "Max: %.1f", mBarChart.getMaxValue()));
     }
