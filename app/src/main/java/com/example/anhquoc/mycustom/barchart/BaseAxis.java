@@ -4,51 +4,52 @@ import android.graphics.Paint;
 
 public class BaseAxis {
 
-    public static final float LABEL_AND_AXIS_PADDING = 10;
+    protected float mLabelAndLindPadding;
 
-    private float mTextSize;
+    protected float mTextSize;
 
-    private int mAlpha;
+    protected int mAlpha;
 
-    private int mColor;
+    protected int mColor;
 
-    public Paint mAxisLinePaint;
+    protected Paint mLinePaint;
 
-    public Paint mAxisLabelPaint;
+    protected Paint mLabelPaint;
 
-    public BaseAxis(float textSize, int alpha, int color) {
+    public BaseAxis(float textSize, int alpha, int color, float labelAndLindPadding) {
         mTextSize = textSize;
         mAlpha = alpha;
         mColor = color;
+        mLabelAndLindPadding = labelAndLindPadding;
 
         initPaint();
     }
 
     public void initPaint() {
-        mAxisLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mAxisLinePaint.setColor(mColor);
-        mAxisLinePaint.setStrokeWidth(1f);
+        mLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mLinePaint.setColor(mColor);
+        mLinePaint.setStrokeWidth(1f);
 
-        mAxisLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mAxisLabelPaint.setColor(mColor);
-        mAxisLabelPaint.setTextSize(mTextSize);
+        mLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mLabelPaint.setColor(mColor);
+        mLabelPaint.setTextSize(mTextSize);
     }
 
     private void setColor(int color) {
         mColor = color;
-        mAxisLabelPaint.setColor(mColor);
-        mAxisLinePaint.setColor(mColor);
+        mLabelPaint.setColor(mColor);
+        mLinePaint.setColor(mColor);
     }
 
-    private void setTextSize(float textSize) {
+    private void setTextSize(int textSize) {
         mTextSize = textSize;
-        mAxisLabelPaint.setTextSize(mTextSize);
-        mAxisLinePaint.setTextSize(mTextSize);
+        mLabelPaint.setTextSize(mTextSize);
+        mLinePaint.setTextSize(mTextSize);
     }
 
     public void setAlpha(int alpha) {
         mAlpha = alpha;
-        mAxisLabelPaint.setAlpha(mAlpha);
-        mAxisLinePaint.setAlpha(mAlpha);
+        mLabelPaint.setAlpha(mAlpha);
+        mLinePaint.setAlpha(mAlpha);
     }
 }

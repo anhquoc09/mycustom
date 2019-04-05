@@ -6,7 +6,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.AttributeSet;
@@ -19,6 +18,7 @@ import android.view.View;
 
 import com.example.anhquoc.mycustom.OnItemSelectedListener;
 import com.example.anhquoc.mycustom.R;
+import com.example.anhquoc.mycustom.barchart.YAxis;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,17 +32,17 @@ public class BarChart extends View {
 
     private static final long DEFAULT_ANIMATE_DURATION = 200;
 
-    private static final int ALPHA_SELECTED = 255;
+    public static final int ALPHA_SELECTED = 255;
 
-    private static final int ALPHA_UNSELECTED = 255;
+    public static final int ALPHA_UNSELECTED = 150;
 
-    private static final int ALPHA_BACKGROUND = 255;
+    public static final int ALPHA_BACKGROUND = 50;
 
     private static final float DEFAULT_BAR_DISTANCE = 10;
 
     private static final float DEFAULT_BAR_WIDTH = 20;
 
-    private static final int DEFAULT_TEXT_SIZE = 12;
+    public static final int DEFAULT_TEXT_SIZE = 12;
 
     private static final float LABEL_AND_AXIS_PADDING = 10;
 
@@ -102,16 +102,38 @@ public class BarChart extends View {
 
     private float mScale = 1f;
 
+    private YAxis mYAxis;
+
     public BarChart(Context context) {
         super(context);
+        init(context);
+    }
+
+    public BarChart(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.BarChart);
+        mColor = typedArray.getColor(R.styleable.BarChart_text_color, Color.LTGRAY);
+        mBarDistance = typedArray.getFloat(R.styleable.BarChart_bar_distance, DEFAULT_BAR_DISTANCE);
+        typedArray.recycle();
+
+        init(context);
+    }
+
+    private void init(Context context) {
         mContext = context;
 
         mTapDetector = new GestureDetector(context, new TapListener());
         mScrollDetector = new GestureDetector(context, new ScrollListener());
         mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
-
         mContentRect = new RectF();
         mColor = Color.LTGRAY;
+
+        mYAxis = new YAxis(dpToPixels(getContext(), mTextSize),
+                100,
+                mColor,
+                dpToPixels(getContext(), 4));
+
         initPaint();
     }
 
@@ -122,38 +144,8 @@ public class BarChart extends View {
                 Color.CYAN, Color.BLUE, Shader.TileMode.REPEAT);
         mBarPaint.setShader(mGradient);
 
-        mLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mLinePaint.setColor(mColor);
-        mLinePaint.setStrokeWidth(1f);
-
-        mLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mLabelPaint.setColor(mColor);
-        mLabelPaint.setTextSize(getTextSize());
-
         mDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mDotPaint.setColor(Color.WHITE);
-    }
-
-    public BarChart(Context context, @Nullable AttributeSet attrs) {
-        super(context, attrs);
-
-        mContext = context;
-
-        mTapDetector = new GestureDetector(context, new TapListener());
-        mScrollDetector = new GestureDetector(context, new ScrollListener());
-        mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
-
-        mContentRect = new RectF();
-
-        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.BarChart);
-
-        mColor = typedArray.getColor(R.styleable.BarChart_text_color, Color.LTGRAY);
-
-        mBarDistance = typedArray.getFloat(R.styleable.BarChart_bar_distance, DEFAULT_BAR_DISTANCE);
-
-        typedArray.recycle();
-
-        initPaint();
     }
 
     @Override
@@ -174,21 +166,12 @@ public class BarChart extends View {
         mMaxScrollDistanceX = getMaxScrollDistanceX();
         mMaxScrollDistanceY = getMaxScrollDistanceY();
         calcScale();
+        mYAxis.drawYAxis(canvas, mContentRect, mScrollDistanceY, mScale);
 
-        drawBackground(canvas);
 
-        canvas.clipRect(mContentRect);
-//        canvas.scale(mScale, mScale);
-        drawEntries(canvas);
+//        drawBackground(canvas);
     }
 
-    private void drawSelectedLine(Canvas canvas, float dX, float dY) {
-        if (dY >= mContentRect.top && dY <= mContentRect.bottom) {
-            mLinePaint.setAlpha(ALPHA_SELECTED);
-            canvas.drawLine(mContentRect.left, dY, mContentRect.right, dY, mLinePaint);
-            canvas.drawCircle(dX + SELECTED_DOT_RADIUS, dY, SELECTED_DOT_RADIUS, mDotPaint);
-        }
-    }
 
     private void drawYContourLine(Canvas canvas, float y, String yAxisName) {
         mLinePaint.setAlpha(ALPHA_BACKGROUND);
@@ -262,7 +245,7 @@ public class BarChart extends View {
                 mLabelPaint);
 
         if (entry.isSelected()) {
-            drawSelectedLine(canvas, centerBar, barRect.top);
+            mYAxis.drawSelected(canvas, centerBar, barRect.top);
         }
     }
 
@@ -304,10 +287,10 @@ public class BarChart extends View {
     }
 
     private RectF getContentRect() {
-        mContentRect.set(0,
-                getLabelAndAxisPadding(),
-                getWidth() - mLabelPaint.measureText(String.valueOf(mMaxValue)) - getLabelAndAxisPadding(),
-                getHeight() - (getTextSize() + getLabelAndAxisPadding() * 2));
+        mContentRect.set(getPaddingLeft(),
+                getPaddingTop(),
+                getWidth() - getPaddingLeft() - getPaddingRight(),
+                getHeight() - getPaddingTop() - getPaddingBottom());
         return mContentRect;
     }
 
@@ -372,7 +355,6 @@ public class BarChart extends View {
     }
 
     public static float dpToPixels(Context context, float dpValue) {
-
         if (context != null) {
             DisplayMetrics metrics = context.getResources().getDisplayMetrics();
             return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dpValue, metrics);
