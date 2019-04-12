@@ -4,7 +4,7 @@ import android.graphics.Paint;
 
 public class BaseAxis {
 
-    protected float mLabelAndLindPadding;
+    protected float mLabelAndLinePadding;
 
     protected float mTextSize;
 
@@ -16,11 +16,11 @@ public class BaseAxis {
 
     protected Paint mLabelPaint;
 
-    public BaseAxis(float textSize, int alpha, int color, float labelAndLindPadding) {
+    public BaseAxis(float textSize, int alpha, int color, float labelAndLinePadding) {
         mTextSize = textSize;
         mAlpha = alpha;
         mColor = color;
-        mLabelAndLindPadding = labelAndLindPadding;
+        mLabelAndLinePadding = labelAndLinePadding;
 
         initPaint();
     }

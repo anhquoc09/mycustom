@@ -6,6 +6,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.AttributeSet;
@@ -18,6 +19,7 @@ import android.view.View;
 
 import com.example.anhquoc.mycustom.OnItemSelectedListener;
 import com.example.anhquoc.mycustom.R;
+import com.example.anhquoc.mycustom.barchart.XAxis;
 import com.example.anhquoc.mycustom.barchart.YAxis;
 
 import java.util.ArrayList;
@@ -64,23 +66,17 @@ public class BarChart extends View {
 
     private ScaleGestureDetector mScaleDetector;
 
-    private Paint mBarPaint;
-
-    private Paint mLinePaint;
-
-    private Paint mLabelPaint;
-
-    private Paint mDotPaint;
+    private Paint mPaint;
 
     private LinearGradient mGradient;
 
-    private RectF mContentRect;
+    private RectF mOriginRect;
 
     private int selectedPosition = -1;
 
     private int mColor;
 
-    private float mMaxValue = 0;
+    private float mMaxValue = 100;
 
     private float mTextSize = DEFAULT_TEXT_SIZE;
 
@@ -104,6 +100,10 @@ public class BarChart extends View {
 
     private YAxis mYAxis;
 
+    private XAxis mXAxis;
+
+    private Rect mTextBound = new Rect();
+
     public BarChart(Context context) {
         super(context);
         init(context);
@@ -126,26 +126,29 @@ public class BarChart extends View {
         mTapDetector = new GestureDetector(context, new TapListener());
         mScrollDetector = new GestureDetector(context, new ScrollListener());
         mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
-        mContentRect = new RectF();
+        mOriginRect = new RectF();
         mColor = Color.LTGRAY;
 
-        mYAxis = new YAxis(dpToPixels(getContext(), mTextSize),
+        mYAxis = new YAxis(dpToPixels(mContext, mTextSize),
                 100,
                 mColor,
-                dpToPixels(getContext(), 4));
+                dpToPixels(mContext, 4));
 
+        mXAxis = new XAxis(dpToPixels(mContext, mTextSize),
+                100,
+                mColor,
+                dpToPixels(mContext, 4),
+                dpToPixels(mContext, mBarWidth),
+                dpToPixels(mContext, mBarDistance));
         initPaint();
     }
 
     private void initPaint() {
-        mBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mBarPaint.setColor(mColor);
+        mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mPaint.setColor(mColor);
         mGradient = new LinearGradient(0, 0, 0, 800,
                 Color.CYAN, Color.BLUE, Shader.TileMode.REPEAT);
-        mBarPaint.setShader(mGradient);
-
-        mDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mDotPaint.setColor(Color.WHITE);
+        mPaint.setShader(mGradient);
     }
 
     @Override
@@ -162,43 +165,23 @@ public class BarChart extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        mContentRect = getContentRect();
+        mOriginRect = getOriginRect();
         mMaxScrollDistanceX = getMaxScrollDistanceX();
         mMaxScrollDistanceY = getMaxScrollDistanceY();
+        calMaxValueTextBound();
         calcScale();
-        mYAxis.drawYAxis(canvas, mContentRect, mScrollDistanceY, mScale);
+        mYAxis.drawYAxis(canvas, mOriginRect, mTextBound, mScrollDistanceY, mScale);
 
+        mXAxis.drawXAxis(canvas, mOriginRect, mTextBound, mScrollDistanceX, mScale);
 
-//        drawBackground(canvas);
+//        drawEntries(canvas);
+
     }
 
-
-    private void drawYContourLine(Canvas canvas, float y, String yAxisName) {
-        mLinePaint.setAlpha(ALPHA_BACKGROUND);
-        canvas.drawLine(mContentRect.left, y, mContentRect.right, y, mLinePaint);
-
-        mLabelPaint.setAlpha(ALPHA_BACKGROUND);
-        canvas.drawText(yAxisName, mContentRect.right + getLabelAndAxisPadding(), y + getTextSize() / 4, mLabelPaint);
-    }
-
-    private void drawBackground(Canvas canvas) {
-        float rangeValue = mMaxValue / mScale;
-        mMaxYAxis = rangeValue + mScrollDistanceY * rangeValue / (mContentRect.height());
-        mMinYAxis = 0 + mScrollDistanceY * rangeValue / (mContentRect.height());
-
-        float valueDistance = ((mMaxYAxis - mMinYAxis) / (NUMOF_BASELINE - 1));
-        float lineDistance = (mContentRect.height()) / (NUMOF_BASELINE - 1);
-        float y;
-        float yValue;
-        String text;
-
-        for (int i = 0; i < NUMOF_BASELINE; i++) {
-            y = mContentRect.bottom - i * lineDistance;
-            yValue = mMinYAxis + i * valueDistance;
-            text = String.format(Locale.US, "%.01f", yValue);
-
-            drawYContourLine(canvas, y, text);
-        }
+    private void calMaxValueTextBound() {
+        String text = String.format(Locale.US, "%.1f", mMaxValue);
+        mPaint.setTextSize(dpToPixels(mContext, mTextSize));
+        mPaint.getTextBounds(text, 0, text.length(), mTextBound);
     }
 
     private void drawEntries(Canvas canvas) {
@@ -209,40 +192,34 @@ public class BarChart extends View {
             RectF barRect = getBarRect(i);
 
             if (entry.isSelected()) {
-                mBarPaint.setAlpha(ALPHA_SELECTED);
-                mLabelPaint.setAlpha(ALPHA_SELECTED);
+                mPaint.setAlpha(ALPHA_SELECTED);
 
             } else {
-                mBarPaint.setAlpha(ALPHA_UNSELECTED);
-                mLabelPaint.setAlpha(ALPHA_BACKGROUND);
+                mPaint.setAlpha(ALPHA_UNSELECTED);
             }
 
-            drawEntry(canvas, entry, barRect);
+            drawContent(canvas, entry, barRect);
         }
     }
 
-    private void drawEntry(Canvas canvas, BarEntry entry, RectF barRect) {
+    private void drawContent(Canvas canvas, BarEntry entry, RectF barRect) {
         //Out of Origin Rectangle
-        if (barRect.left > mContentRect.right || barRect.right < mContentRect.left) {
+        if (barRect.left > mOriginRect.right || barRect.right < mOriginRect.left) {
             return;
         }
 
-        entry.getBound().set(Math.max(barRect.left, mContentRect.left),
-                Math.max(barRect.top, mContentRect.top),
-                Math.min(barRect.right, mContentRect.right),
-                Math.min(barRect.bottom, mContentRect.bottom));
+        entry.getBound().set(Math.max(barRect.left, mOriginRect.left),
+                Math.max(barRect.top, mOriginRect.top),
+                Math.min(barRect.right, mOriginRect.right),
+                Math.min(barRect.bottom, mOriginRect.bottom));
 
         RectF bound = entry.getBound();
 
-        if (barRect.top <= mContentRect.bottom) {
-            canvas.drawRect(bound, mBarPaint);
+        if (barRect.top <= mOriginRect.bottom) {
+            canvas.drawRect(bound, mPaint);
         }
 
         float centerBar = bound.left + bound.width() / 2;
-        canvas.drawText(entry.getXAxisName(),
-                centerBar - getTextSize() / 4,
-                mContentRect.bottom + getLabelAndAxisPadding() * 2,
-                mLabelPaint);
 
         if (entry.isSelected()) {
             mYAxis.drawSelected(canvas, centerBar, barRect.top);
@@ -256,11 +233,11 @@ public class BarChart extends View {
 
     private RectF getBarRect(int position) {
         BarEntry entry = mEntries.get(position);
-        float valueRatio = (mContentRect.height()) / (mMaxYAxis - mMinYAxis);
+        float valueRatio = (mOriginRect.height()) / (mMaxYAxis - mMinYAxis);
 
-        float left = mContentRect.left + position * (getBarWidth() + getBarDistance()) - mScrollDistanceX;
+        float left = mOriginRect.left + position * (getBarWidth() + getBarDistance()) - mScrollDistanceX;
         float right = left + getBarWidth();
-        float bottom = mContentRect.bottom + mScrollDistanceY;
+        float bottom = mOriginRect.bottom + mScrollDistanceY;
         float top = bottom - entry.getValue() * valueRatio;
 
         RectF rectF = entry.getBound();
@@ -269,29 +246,25 @@ public class BarChart extends View {
     }
 
     private float getMaxScrollDistanceX() {
-        float maxDistance = 0;
-        float distance = mEntries.size() * (getBarWidth() + getBarDistance()) - (mContentRect.right - mContentRect.left);
-        if (distance > 0) {
-            maxDistance = distance - getBarDistance();
-        }
-        return maxDistance;
+        float maxDistance = mXAxis.getMaxContentWidth() - (mXAxis.getRight() - mXAxis.getLeft());
+        return maxDistance > 0 ? maxDistance : 0;
     }
 
     private float getMaxScrollDistanceY() {
         float maxDistance = 0;
-        float distance = mMaxValue * mScale * (mContentRect.bottom - mContentRect.top) / (mMaxYAxis - mMinYAxis) - (mContentRect.bottom - mContentRect.top);
+        float distance = mMaxValue * mScale * (mOriginRect.bottom - mOriginRect.top) / (mMaxYAxis - mMinYAxis) - (mOriginRect.bottom - mOriginRect.top);
         if (distance > 0) {
             maxDistance = distance;
         }
         return maxDistance;
     }
 
-    private RectF getContentRect() {
-        mContentRect.set(getPaddingLeft(),
+    private RectF getOriginRect() {
+        mOriginRect.set(getPaddingLeft(),
                 getPaddingTop(),
                 getWidth() - getPaddingLeft() - getPaddingRight(),
                 getHeight() - getPaddingTop() - getPaddingBottom());
-        return mContentRect;
+        return mOriginRect;
     }
 
     private float getBarWidth() {
@@ -300,14 +273,6 @@ public class BarChart extends View {
 
     private float getBarDistance() {
         return dpToPixels(mContext, mBarDistance);
-    }
-
-    private float getLabelAndAxisPadding() {
-        return dpToPixels(mContext, LABEL_AND_AXIS_PADDING);
-    }
-
-    private float getTextSize() {
-        return spToPixels(mContext, mTextSize);
     }
 
     @Override
@@ -358,14 +323,6 @@ public class BarChart extends View {
         if (context != null) {
             DisplayMetrics metrics = context.getResources().getDisplayMetrics();
             return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dpValue, metrics);
-        }
-        return 0;
-    }
-
-    public static float spToPixels(Context context, float spValue) {
-        if (context != null) {
-            DisplayMetrics metrics = context.getResources().getDisplayMetrics();
-            return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, spValue, metrics);
         }
         return 0;
     }
@@ -459,7 +416,7 @@ public class BarChart extends View {
             mScale *= detector.getScaleFactor();
 
             //Max scale = 5, min scale = 1/2
-            mScale = Math.max(0.5f, Math.min(mScale, 5.0f));
+            mScale = Math.max(1f, Math.min(mScale, 3f));
             invalidate();
             return true;
         }

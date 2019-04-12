@@ -5,8 +5,6 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 
-import java.util.Locale;
-
 public class YAxis extends BaseAxis {
 
     private float mMaxValue = 100;
@@ -30,22 +28,18 @@ public class YAxis extends BaseAxis {
         mDotPaint.setColor(mColor);
     }
 
-    private void calculateMaxTextBound() {
-        String text = String.format(Locale.US, "%.1f", mMaxValue);
-        mLabelPaint.getTextBounds(text, 0, text.length(), mTextBound);
-    }
 
     private void calculateContentRect(RectF originRect) {
         mContentRect.left = originRect.left;
         mContentRect.top = originRect.top;
         mContentRect.right = originRect.right;
-        mContentRect.bottom = originRect.bottom - mTextBound.height() + mLabelAndLindPadding * 2;
+        mContentRect.bottom = originRect.bottom - mTextBound.height() - mLabelAndLinePadding * 2;
     }
 
-    public void drawYAxis(Canvas c, RectF originRect, float translateY, float scale) {
+    public void drawYAxis(Canvas c, RectF originRect, Rect textBound, float translateY, float scale) {
         mTranslateY = translateY;
         mScaleY = scale;
-        calculateMaxTextBound();
+        mTextBound = textBound;
         calculateContentRect(originRect);
 
         mExtraLineSpace = (mContentRect.height() - mTextBound.height()) / 4 * mScaleY;
@@ -54,10 +48,11 @@ public class YAxis extends BaseAxis {
         mLabelPaint.setAlpha(mAlpha);
 
         c.save();
+        c.clipRect(mContentRect);
         c.translate(0, mTranslateY);
 
-        float lineStopX = mContentRect.right - mTextBound.width() - mLabelAndLindPadding * 2;
-        float labelX = lineStopX + mLabelAndLindPadding;
+        float lineStopX = mContentRect.right - mTextBound.width() - mLabelAndLinePadding * 2;
+        float labelX = lineStopX + mLabelAndLinePadding;
 
         for (int i = 0; i < 5; i++) {
             float y = mContentRect.bottom - (float) mTextBound.height() / 2 - mExtraLineSpace * i;
@@ -95,5 +90,9 @@ public class YAxis extends BaseAxis {
 
     public float getMaxValue() {
         return mMaxValue;
+    }
+
+    public float getYAxisWidth() {
+        return mTextBound.width() + mLabelAndLinePadding * 2;
     }
 }

@@ -1,26 +1,17 @@
 package com.example.anhquoc.mycustom.charts;
 
+import android.graphics.Canvas;
 import android.graphics.RectF;
 
 public class BarEntry extends Entry {
-    private String mXAxisName;
 
     private RectF mBound;
 
     private boolean mIsSelected = false;
 
-    public BarEntry(String XAxisName, float value) {
-        mXAxisName = XAxisName;
+    public BarEntry(float value) {
         mValue = value;
         mBound = new RectF();
-    }
-
-    public String getXAxisName() {
-        return mXAxisName;
-    }
-
-    public void setXAxisName(String XAxisName) {
-        mXAxisName = XAxisName;
     }
 
     public void setSelected(boolean isSelected) {
@@ -37,5 +28,9 @@ public class BarEntry extends Entry {
 
     public boolean isSelected() {
         return mIsSelected;
+    }
+
+    public void draw(Canvas c) {
+
     }
 }
