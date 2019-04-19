@@ -15,6 +15,8 @@ public class YAxis extends BaseAxis {
 
     private float mScaleY;
 
+    private float mValueRatio = 0;
+
     private RectF mContentRect = new RectF();
 
     private Rect mTextBound = new Rect();
@@ -43,6 +45,7 @@ public class YAxis extends BaseAxis {
         calculateContentRect(originRect);
 
         mExtraLineSpace = (mContentRect.height() - mTextBound.height()) / 4 * mScaleY;
+        mValueRatio = mExtraLineSpace * 4 / mMaxValue;
 
         mLinePaint.setAlpha(mAlpha);
         mLabelPaint.setAlpha(mAlpha);
@@ -94,5 +97,9 @@ public class YAxis extends BaseAxis {
 
     public float getYAxisWidth() {
         return mTextBound.width() + mLabelAndLinePadding * 2;
+    }
+
+    public float getValueRatio() {
+        return mValueRatio;
     }
 }

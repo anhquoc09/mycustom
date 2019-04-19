@@ -54,7 +54,7 @@ public class XAxis extends BaseAxis {
         mTranslateX = translateX;
         mScaleX = scaleX;
         mMaxValueTextBound = textBound;
-        mLabelWidth = (mBarWidth * 3 + mBarDistance * 2) * mScaleX;
+        mLabelWidth = (mBarWidth + mBarDistance) * BarEntries.MAX_NUM_OF_ENTRIES * mScaleX;
 
         calculateContentRect(originRect);
         mLabelPaint.setAlpha(mAlpha);
@@ -88,10 +88,10 @@ public class XAxis extends BaseAxis {
     }
 
     public float getMaxContentWidth() {
-        return mLabelWidth * 12 + mBarDistance * mScaleX * 12;
+        return mLabelWidth * 12;
     }
 
     public float getStartEntries(int i) {
-        return mContentRect.left + (mLabelWidth + mBarDistance * mScaleX) * i;
+        return mContentRect.left + mLabelWidth * i;
     }
 }

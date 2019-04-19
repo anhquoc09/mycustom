@@ -1,7 +1,11 @@
 package com.example.anhquoc.mycustom.charts;
 
+import android.graphics.Paint;
+
 public class Entry {
-    float mValue;
+    protected float mValue;
+
+    protected Paint mEntryPaint;
 
     public float getValue() {
         return mValue;

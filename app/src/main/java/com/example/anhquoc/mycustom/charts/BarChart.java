@@ -17,16 +17,17 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 
+import androidx.annotation.Nullable;
+
 import com.example.anhquoc.mycustom.OnItemSelectedListener;
 import com.example.anhquoc.mycustom.R;
+import com.example.anhquoc.mycustom.barchart.BarEntries;
 import com.example.anhquoc.mycustom.barchart.XAxis;
 import com.example.anhquoc.mycustom.barchart.YAxis;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-
-import androidx.annotation.Nullable;
 
 public class BarChart extends View {
 
@@ -56,7 +57,7 @@ public class BarChart extends View {
 
     private static final int SELECTED_DOT_RADIUS = 5;
 
-    private final List<BarEntry> mEntries = new ArrayList<>();
+    private final List<BarEntries> mEntries = new ArrayList<>();
 
     private OnItemSelectedListener mItemSelectedListener;
 
@@ -163,7 +164,6 @@ public class BarChart extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
 
         mOriginRect = getOriginRect();
         mMaxScrollDistanceX = getMaxScrollDistanceX();
@@ -174,8 +174,19 @@ public class BarChart extends View {
 
         mXAxis.drawXAxis(canvas, mOriginRect, mTextBound, mScrollDistanceX, mScale);
 
-//        drawEntries(canvas);
+        canvas.save();
+        canvas.clipRect(getContentRect());
+        canvas.translate(-mScrollDistanceX, mScrollDistanceY);
 
+        for (int i = 0; i < mEntries.size(); i++) {
+            mEntries.get(i).drawEntries(canvas, getContentRect(), mYAxis.getValueRatio(), mScale);
+        }
+
+        canvas.restore();
+    }
+
+    private RectF getContentRect() {
+        return new RectF(mXAxis.getLeft(), mYAxis.getTop(), mXAxis.getRight(), mYAxis.getBottom());
     }
 
     private void calMaxValueTextBound() {
@@ -186,20 +197,7 @@ public class BarChart extends View {
 
     private void drawEntries(Canvas canvas) {
 
-        for (int i = 0; i < mEntries.size(); i++) {
 
-            BarEntry entry = mEntries.get(i);
-            RectF barRect = getBarRect(i);
-
-            if (entry.isSelected()) {
-                mPaint.setAlpha(ALPHA_SELECTED);
-
-            } else {
-                mPaint.setAlpha(ALPHA_UNSELECTED);
-            }
-
-            drawContent(canvas, entry, barRect);
-        }
     }
 
     private void drawContent(Canvas canvas, BarEntry entry, RectF barRect) {
@@ -229,20 +227,6 @@ public class BarChart extends View {
     private void calcScale() {
         mBarDistance = DEFAULT_BAR_DISTANCE * mScale;
         mBarWidth = DEFAULT_BAR_WIDTH * mScale;
-    }
-
-    private RectF getBarRect(int position) {
-        BarEntry entry = mEntries.get(position);
-        float valueRatio = (mOriginRect.height()) / (mMaxYAxis - mMinYAxis);
-
-        float left = mOriginRect.left + position * (getBarWidth() + getBarDistance()) - mScrollDistanceX;
-        float right = left + getBarWidth();
-        float bottom = mOriginRect.bottom + mScrollDistanceY;
-        float top = bottom - entry.getValue() * valueRatio;
-
-        RectF rectF = entry.getBound();
-        rectF.set(left, top, right, bottom);
-        return rectF;
     }
 
     private float getMaxScrollDistanceX() {
@@ -283,10 +267,10 @@ public class BarChart extends View {
         return true;
     }
 
-    public void setData(List<BarEntry> entries) {
+    public void setData(List<BarEntries> entries) {
         mEntries.clear();
         if (entries != null && !entries.isEmpty()) {
-            add(entries);
+            mEntries.addAll(entries);
         }
     }
 
@@ -294,19 +278,34 @@ public class BarChart extends View {
         mItemSelectedListener = listener;
     }
 
-    public void add(List<BarEntry> entries) {
-        for (int i = 0; i < entries.size(); i++) {
-            add(entries.get(i).getXAxisName(), entries.get(i).getValue());
+    public void add(BarEntries entries) {
+        if (entries != null) {
+            mEntries.add(entries);
         }
     }
 
-    public void add(String name, float value) {
-        BarEntry entry = new BarEntry(name, value);
-        mEntries.add(entry);
-        if (value > mMaxValue) {
-            mMaxYAxis = value;
-            mMaxValue = value;
+    public void add(float value) {
+        BarEntry entry = new BarEntry(value, dpToPixels(mContext, mBarWidth), dpToPixels(mContext, mBarDistance));
+        if (mEntries.size() == 0) {
+            BarEntries newEntries = new BarEntries(0, dpToPixels(mContext, mBarWidth), dpToPixels(mContext, mBarDistance));
+            newEntries.add(entry);
+            mEntries.add(newEntries);
+
+        } else if (!mEntries.get(mEntries.size() - 1).isFull()) {
+            mEntries.get(mEntries.size() - 1).add(entry);
+
+        } else {
+            if (mEntries.size() < 12) {
+                BarEntries newEntries = new BarEntries(mEntries.size(), dpToPixels(mContext, mBarWidth), dpToPixels(mContext, mBarDistance));
+                newEntries.add(entry);
+                mEntries.add(newEntries);
+            }
         }
+
+//        if (value > mMaxValue) {
+//            mMaxYAxis = value;
+//            mMaxValue = value;
+//        }
 
         invalidate();
     }
@@ -353,27 +352,27 @@ public class BarChart extends View {
             int position = (int) ((x + mScrollDistanceX) / (getBarDistance() + getBarWidth()));
             float mod = ((x + mScrollDistanceX) - position * (getBarDistance() + getBarWidth()));
 
-            if (selectedPosition >= 0) {
-                mEntries.get(selectedPosition).setSelected(false);
-            }
-
-            BarEntry entry = mEntries.get(position);
-            if (mod <= getBarWidth() && y >= entry.getBound().top) {
-                entry = mEntries.get(position);
-                entry.setSelected(true);
-                selectedPosition = position;
-            } else {
-                selectedPosition = -1;
-            }
-            invalidate();
-
-            if (mItemSelectedListener != null) {
-                if (selectedPosition != -1) {
-                    mItemSelectedListener.onItemSelected(entry);
-                } else {
-                    mItemSelectedListener.onNothingSelected();
-                }
-            }
+//            if (selectedPosition >= 0) {
+//                mEntries.get(selectedPosition).setSelected(false);
+//            }
+//
+//            BarEntry entry = mEntries.get(position);
+//            if (mod <= getBarWidth() && y >= entry.getBound().top) {
+//                entry = mEntries.get(position);
+//                entry.setSelected(true);
+//                selectedPosition = position;
+//            } else {
+//                selectedPosition = -1;
+//            }
+//            invalidate();
+//
+//            if (mItemSelectedListener != null) {
+//                if (selectedPosition != -1) {
+//                    mItemSelectedListener.onItemSelected(entry);
+//                } else {
+//                    mItemSelectedListener.onNothingSelected();
+//                }
+//            }
             return true;
         }
     }

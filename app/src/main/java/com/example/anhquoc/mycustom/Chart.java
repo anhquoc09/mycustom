@@ -90,8 +90,8 @@ public class Chart extends View {
                 if (mMaxWidthOfYAxisText < currentTextWidth)
                     mMaxWidthOfYAxisText = currentTextWidth;
 
-                mPaint.getTextBounds(barDatas[index].getXAxisName(), 0,
-                        barDatas[index].getXAxisName().length(), bounds);
+//                mPaint.getTextBounds(barDatas[index].getXAxisName(), 0,
+//                        barDatas[index].getXAxisName().length(), bounds);
                 if (mMaxHeightOfXAxisText < bounds.height())
                     mMaxHeightOfXAxisText = bounds.height();
             }
@@ -135,7 +135,7 @@ public class Chart extends View {
                 y1 = origin.y - barHeight;
                 y2 = origin.y;
                 canvas.drawRect(x1, y1, x2, y2, mPaint);
-                showXAxisLabel(origin, mDataArray[index].getXAxisName(), x1 + (x2 - x1) / 2, canvas);
+//                showXAxisLabel(origin, mDataArray[index].getXAxisName(), x1 + (x2 - x1) / 2, canvas);
             }
             showYAxisLabels(origin, (usableViewHeight - getXAxisLabelAndMargin()), canvas);
         }

@@ -4,11 +4,8 @@ import android.os.Bundle;
 import android.widget.TextView;
 
 import com.example.anhquoc.mycustom.charts.BarChart;
-import com.example.anhquoc.mycustom.charts.BarEntry;
 import com.example.anhquoc.mycustom.charts.Entry;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,8 +23,6 @@ public class MainActivity extends AppCompatActivity implements OnItemSelectedLis
     @BindView(R.id.text_selected)
     TextView mTextSelected;
 
-    private final List<BarEntry> mEntries = new ArrayList<>();
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,26 +31,24 @@ public class MainActivity extends AppCompatActivity implements OnItemSelectedLis
 
         mBarChart.setOnItemSelectedListener(this);
 
-        mEntries.add(new BarEntry("1", 20));
-        mEntries.add(new BarEntry("2", 30));
-        mEntries.add(new BarEntry("3", 40));
-        mEntries.add(new BarEntry("4", 100));
-        mEntries.add(new BarEntry("5", 50));
-        mEntries.add(new BarEntry("6", 25));
-        mEntries.add(new BarEntry("1", 120));
-        mEntries.add(new BarEntry("2", 30));
-        mEntries.add(new BarEntry("3", 40));
-        mEntries.add(new BarEntry("4", 100));
-        mEntries.add(new BarEntry("5", 150));
-        mEntries.add(new BarEntry("6", 25));
-        mEntries.add(new BarEntry("1", 20));
-        mEntries.add(new BarEntry("2", 30));
-        mEntries.add(new BarEntry("3", 40));
-        mEntries.add(new BarEntry("4", 100));
-        mEntries.add(new BarEntry("5", 50));
-        mEntries.add(new BarEntry("6", 25));
-
-        mBarChart.add(mEntries);
+        mBarChart.add(20);
+        mBarChart.add(30);
+        mBarChart.add(40);
+        mBarChart.add(100);
+        mBarChart.add(50);
+        mBarChart.add(25);
+        mBarChart.add(120);
+        mBarChart.add(30);
+        mBarChart.add(40);
+        mBarChart.add(100);
+        mBarChart.add(150);
+        mBarChart.add(25);
+        mBarChart.add(20);
+        mBarChart.add(30);
+        mBarChart.add(40);
+        mBarChart.add(100);
+        mBarChart.add(50);
+        mBarChart.add(25);
 
         mTextMax.setText(String.format(Locale.US, "Max: %.1f", mBarChart.getMaxValue()));
     }
