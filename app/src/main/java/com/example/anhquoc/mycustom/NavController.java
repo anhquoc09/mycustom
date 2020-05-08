@@ -123,11 +123,17 @@ public class NavController {
     }
 
     public static boolean popBackStack(FragmentManager fragmentManager, String tag, int flag) {
-        if (fragmentManager != null && fragmentManager.getBackStackEntryCount() > 0) {
-            fragmentManager.popBackStack(tag, flag);
-            return true;
+
+        if (fragmentManager == null || fragmentManager.getBackStackEntryCount() <= 0) {
+            return false;
         }
-        return false;
+
+        if (tag != null && fragmentManager.findFragmentByTag(tag) == null) {
+            return false;
+        }
+
+        fragmentManager.popBackStack(tag, flag);
+        return true;
     }
 
     public static boolean popBackStackImmediate(FragmentManager fragmentManager, String tag) {
@@ -135,10 +141,15 @@ public class NavController {
     }
 
     public static boolean popBackStackImmediate(FragmentManager fragmentManager, String tag, int flag) {
-        if (fragmentManager != null && fragmentManager.getBackStackEntryCount() > 0) {
-            fragmentManager.popBackStackImmediate(tag, flag);
-            return true;
+        if (fragmentManager == null || fragmentManager.getBackStackEntryCount() <= 0) {
+            return false;
         }
-        return false;
+
+        if (tag != null && fragmentManager.findFragmentByTag(tag) == null) {
+            return false;
+        }
+
+        fragmentManager.popBackStackImmediate(tag, flag);
+        return true;
     }
 }

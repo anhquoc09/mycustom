@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="activityShortDur">200</integer>
+    <integer name="activityDefaultDur">300</integer>
+</resources>
